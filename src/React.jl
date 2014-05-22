@@ -112,7 +112,7 @@ end
 lift(f :: Function, inputs :: Signal...) = lift(Any, f, inputs...)
 
 # reduce over a stream of updates
-function reduce{T}(f :: Function, signal :: Signal{T}, v0 :: T)
+function reduce{T, U}(f :: Function, v0 :: T, signal :: Signal{U})
     local a = v0
     function foldp(b)
         a = f(a, b)

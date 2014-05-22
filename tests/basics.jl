@@ -34,7 +34,7 @@ update(a, number())
 
 ## reduce over time
 update(a, 0)
-f = reduce(+, a, 0)
+f = reduce(+, 0, a)
 nums = int(rand(100)*1000)
 map(x -> update(a, x), nums)
 
@@ -66,7 +66,7 @@ update(i, true)
 @test j.value == g.value
 
 # droprepeats
-count = s -> reduce((x, y) -> x+1, s, 0)
+count = s -> reduce((x, y) -> x+1, 0, s)
 
 k = Input(1)
 l = droprepeats(k)
