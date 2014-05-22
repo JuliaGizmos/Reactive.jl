@@ -1,6 +1,7 @@
 module React
 
-export Signal, Input, lift, update, reduce
+export Signal, Input, lift, update,
+       reduce, dropif, droprepeats, sampleon
 
 import Base.reduce, Base.show, Base.merge
 
@@ -56,8 +57,8 @@ function send{T}(node :: Signal{T}, timestep :: Time, changed :: Bool)
 end
 
 # recv is called by update
-function recv{T}(inp :: Input{T}, timestep :: Time,
-                 originator :: Signal, val :: T)
+function recv{T, U}(inp :: Input{T}, timestep :: Time,
+                 originator :: Signal{U}, val :: U)
     # Forward it to children
     changed = originator == inp
     if changed
@@ -159,8 +160,49 @@ function merge{T}(signals :: Signal{T}...)
     return node
 end
 
-# TODO:
-# Abort propogation from inside a Lift
-# Eliminate redundancy when lifted arguments depend on the same Input
+function dropif{T}(pred :: Function, v0 :: T, signal :: Signal)
+    node = Node{T}(pred(signal.value) ? v0 : signal.value, :dropif)
+    function recv(timestep :: Time, changed :: Bool, parent :: Signal)
+        change = changed && ~pred(signal.value)
+        if change node.value = signal.value end
+        send(node, timestep, change)
+    end
+    push!(signal.children, node)
+    node.recv = recv
+    return node
+end
+
+function droprepeats{T}(signal :: Signal{T})
+    node = Node{T}(signal.value, :droprepeats)
+    function recv(timestep :: Time, changed :: Bool, parent :: Signal)
+        change = changed && node.value != signal.value
+        if change
+            node.value = signal.value
+        end
+        send(node, timestep, change)
+    end
+    push!(signal.children, node)
+    node.recv = recv
+    return node
+end
+
+function sampleon{T, U}(s1 :: Signal{T}, s2 :: Signal{U})
+    node = Node{U}(s2.value, :sampleon)
+    local count = 0
+    function recv(timestep :: Time, changed :: Bool, parent :: Signal)
+        ischanged = parent == s1 ? changed : false;
+        count += 1
+        if count == 2
+            if ischanged node.value = s2.value end
+            send(node, timestep, ischanged)
+            count = 0
+            ischanged = false
+        end
+    end
+    push!(s1.children, node)
+    push!(s2.children, node)
+    node.recv = recv
+    return node
+end
 
 end # module

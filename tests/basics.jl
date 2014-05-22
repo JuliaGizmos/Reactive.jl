@@ -39,3 +39,50 @@ nums = int(rand(100)*1000)
 map(x -> update(a, x), nums)
 
 @test sum(nums) == f.value
+
+# dropif
+g = Input(0)
+pred = x -> x % 2 == 0
+h = dropif(pred, 1, g)
+
+@test h.value == 1
+
+update(g, 2)
+@test h.value == 1
+
+update(g, 3)
+@test h.value == 3
+
+# sampleon
+
+update(g, number())
+i = Input(true)
+j = sampleon(i, g)
+# default value
+@test j.value == g.value
+update(g, g.value-1)
+@test j.value == g.value+1
+update(i, true)
+@test j.value == g.value
+
+# droprepeats
+count = s -> reduce((x, y) -> x+1, s, 0)
+
+k = Input(1)
+l = droprepeats(k)
+
+@test l.value == k.value
+update(k, 1)
+@test l.value == k.value
+update(k, 0)
+#println(l.value, " ", k.value)
+@test l.value == k.value
+
+m = count(k)
+n = count(l)
+
+seq = [1, 1, 1, 0, 1, 0, 1, 0, 0]
+map(x -> update(k, x), seq)
+
+@test m.value == length(seq) + 1
+@test n.value == 7
