@@ -1,72 +1,114 @@
 module React
 
-export Signal, Input, Lift, update, reduce
+export Signal, Input, lift, update, reduce
 
-import Base.reduce
+import Base.reduce, Base.show, Base.merge
 
 # A signal is a value that can change over time.
 abstract Signal{T}
 
+typealias Time Float64
+
 # Unique ID
 typealias UID Int
+
 begin
     local last_id = 0
     guid() = last_id += 1
 end
 
-# Signal graph
-children = Dict{Signal, Set{Signal}}()
+# Root nodes of the graph
+roots = Signal[]
 
 # An input is a root node in the signal graph.
 # It must be created with a default value, and can be
 # updated with a call to `update`.
 type Input{T} <: Signal{T}
     id :: UID
+    children :: Set{Signal}
     value :: T
-    function Input(val :: T)
-        self = new(guid(), val) # A signal requires a default value
-        children[self] = Set{Signal}()
+
+    function Input(v :: T)
+        self = new(guid(), Set{Signal}(), v)
+        append!(roots, [self])
         return self
     end
 end
 Input{T}(val :: T) = Input{T}(val)
 
-# A Lift transforms many input signals into another signal
-# Lift is constructed with a function of arity N and N signals
-# whose values act as the input to the function
-type Lift{T} <: Signal{T}
+type Node{T} <: Signal{T}
     id :: UID
+    children :: Set{Signal}
+    node_type :: Symbol
     value :: T
-    update :: Function
-    
-    function Lift(f :: Function, inputs :: Signal...)
-        apply_f() = f([s.value for s in inputs]...) :: T
-        self = new(guid(), apply_f(), apply_f)
-        children[self] = Set{Signal}()
 
-        for s in inputs
-            push!(children[s], self)
-        end
-        return self
+    recv :: Function
+
+    function Node(val :: T, node_type=:Node)
+        new(guid(), Set{Signal}(), node_type, val)
     end
 end
-Lift(f :: Function, inputs :: Signal...) = Lift{Any}(f, inputs...)
+
+function send{T}(node :: Signal{T}, timestep :: Time, changed :: Bool)
+    for child in node.children
+        child.recv(timestep, changed, node)
+    end
+end
+
+# recv is called by update
+function recv{T}(inp :: Input{T}, timestep :: Time,
+                 originator :: Signal, val :: T)
+    # Forward it to children
+    changed = originator == inp
+    if changed
+        inp.value = val
+    end
+    send(inp, timestep, changed)
+end
 
 # update method on an Input updates its value
 # and notifies all dependent signals
 function update{T}(inp :: Input{T}, value :: T)
-    inp.value = value
-    for c in children[inp]
-        notify(c, inp)
+    timestep = time()
+    for node in roots
+        recv(node, timestep, inp, value)
     end
 end
 
-function notify{T, U}(node :: Lift{T}, source :: Signal{U})
-    node.value = node.update() # recompute node
-    for c in children[node]
-        notify(c, node)
+function lift(output_type :: DataType, f :: Function,
+              inputs :: Signal...)
+    local count = 0,
+          n = length(inputs),
+          ischanged = false # accumulate change info
+    apply_f() = apply(f, [i.value for i in inputs])
+    node = Node{output_type}(apply_f(), :lift)
+
+    function recv(timestep :: Time, changed :: Bool, parent :: Signal)
+        count += 1
+        if changed
+            ischanged = true
+        end
+
+        if count == n
+            if ischanged
+                # counting makes sure apply_f is called
+                # just once in a given timestep
+                node.value = apply_f()
+            end
+            send(node, timestep, ischanged)
+            ischanged = false
+            count = 0
+        end
     end
+    node.recv = recv
+
+    for i in inputs
+        push!(i.children, node)
+    end
+    return node
 end
+
+lift(f :: Function, inputs :: Signal...) = lift(Any, f, inputs...)
 
 # reduce over a stream of updates
 function reduce{T}(f :: Function, signal :: Signal{T}, v0 :: T)
@@ -74,12 +116,47 @@ function reduce{T}(f :: Function, signal :: Signal{T}, v0 :: T)
     function foldp(b)
         a = f(a, b)
     end
-    Lift{T}(foldp, signal)
+    lift(T, foldp, signal)
 end
 
-# merge two signals
-function merge{T}(f :: Function, s1 :: Signal{T}, s2 :: Signal{T})
-    node = Lift{T}(x->x)
+# merge signals
+function merge{T}(signals :: Signal{T}...)
+
+    first, _ = signals
+    node = Node{T}(first.value, :merge)
+    rank = {n => i for (i, n) in enumerate(signals)}
+    
+    local n = length(signals), count = 0, ischanged = false,
+          minrank = n+1, val = node.value
+
+    function recv(timestep :: Time, changed :: Bool, parent :: Signal)
+        count += 1
+        if changed
+            ischanged = true
+            if haskey(rank, parent)
+                if minrank > rank[parent]
+                    val = parent.value
+                    minrank = rank[parent]
+                end
+            end
+        end
+        if count == n
+            if ischanged
+                node.value = val
+                minrank = n+1
+            end
+            send(node, timestep, ischanged)
+            ischanged = false
+            count = 0
+        end
+    end
+
+    for sig in signals
+        push!(sig.children, node)
+    end
+    node.recv = recv
+
+    return node
 end
 
 # TODO:
