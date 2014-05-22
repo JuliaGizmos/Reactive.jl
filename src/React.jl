@@ -1,9 +1,10 @@
 module React
 
-export Signal, Input, lift, update,
-       reduce, dropif, droprepeats, sampleon
+export Signal, Input, lift,
+       dropif, droprepeats, sampleon
 
-import Base.reduce, Base.show, Base.merge
+import Base.push!, Base.reduce, Base.merge
+       Base.show, Base.display
 
 # A signal is a value that can change over time.
 abstract Signal{T}
@@ -31,7 +32,7 @@ type Input{T} <: Signal{T}
 
     function Input(v :: T)
         self = new(guid(), Set{Signal}(), v)
-        append!(roots, [self])
+        push!(roots, self)
         return self
     end
 end
@@ -69,7 +70,7 @@ end
 
 # update method on an Input updates its value
 # and notifies all dependent signals
-function update{T}(inp :: Input{T}, value :: T)
+function push!{T}(inp :: Input{T}, value :: T)
     timestep = time()
     for node in roots
         recv(node, timestep, inp, value)

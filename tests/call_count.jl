@@ -21,8 +21,8 @@ ce = count(e)
 cf = count(f)
 
 for i in 1:100
-    update(a, number())
-    update(b, number())
+    push!(a, number())
+    push!(b, number())
 
     @test ca.value == i+1
     @test cb.value == i+1
