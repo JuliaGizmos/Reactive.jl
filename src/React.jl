@@ -3,7 +3,7 @@ module React
 export Signal, Input, lift,
        dropif, droprepeats, sampleon
 
-import Base.push!, Base.reduce, Base.merge
+import Base.push!, Base.reduce, Base.merge,
        Base.show, Base.display
 
 # A signal is a value that can change over time.
@@ -204,6 +204,24 @@ function sampleon{T, U}(s1 :: Signal{T}, s2 :: Signal{U})
     push!(s2.children, node)
     node.recv = recv
     return node
+end
+
+function show{T}(node :: Node{T})
+    show(node.value)
+end
+
+function show{T}(inp :: Input{T})
+    show(inp.value)
+end
+
+function display{T}(node :: Node{T})
+    print("[$(node.node_type){$(T)}@$(node.id)] ")
+    display(node.value)
+end
+
+function display{T}(node :: Input{T})
+    print("<input{$(T)}@$(node.id)> ")
+    display(node.value)
 end
 
 end # module
