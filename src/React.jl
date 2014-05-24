@@ -111,6 +111,8 @@ function lift(output_type :: DataType, f :: Function,
 end
 
 lift(f :: Function, inputs :: Signal...) = lift(Any, f, inputs...)
+map(T :: DataType, f :: Function, input :: Signal) = lift(T, f, input)
+map(f :: Function, input :: Signal) = lift(f, input)
 
 # reduce over a stream of updates
 function reduce{T, U}(f :: Function, v0 :: T, signal :: Signal{U})
