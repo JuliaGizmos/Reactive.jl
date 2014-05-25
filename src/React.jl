@@ -69,11 +69,19 @@ function recv{T, U}(inp :: Input{T}, timestep :: Time,
 end
 
 # update method on an Input updates its value
-# and notifies all dependent signals
-function push!{T}(inp :: Input{T}, value :: T)
-    timestep = time()
-    for node in roots
-        recv(node, timestep, inp, value)
+# and notifies all dependent signals.
+begin
+    local pushing = false
+    function push!{T}(inp :: Input{T}, value :: T)
+        if pushing
+            error("Encountered a signal loop! Did you call push! inside a lift?")
+        end
+        pushing = true
+        timestep = time()
+        for node in roots
+            recv(node, timestep, inp, value)
+        end
+        pushing = false
     end
 end
 
