@@ -216,22 +216,16 @@ function sampleon{T, U}(s1 :: Signal{T}, s2 :: Signal{U})
     return node
 end
 
-function show{T}(node :: Node{T})
+function show{T}(node :: Signal{T})
     show(node.value)
 end
 
-function show{T}(inp :: Input{T})
-    show(inp.value)
+function display{T}(d :: TextDisplay, node :: Node{T})
+    return "[$(node.node_type){$(T)}@$(node.id)] " * show(node)
 end
 
-function display{T}(node :: Node{T})
-    print("[$(node.node_type){$(T)}@$(node.id)] ")
-    display(node.value)
-end
-
-function display{T}(node :: Input{T})
-    print("<input{$(T)}@$(node.id)> ")
-    display(node.value)
+function display{T}(d :: TextDisplay, node :: Input{T})
+    return "<input{$(T)}@$(node.id)> " *show(node)
 end
 
 end # module
