@@ -1,14 +1,10 @@
 module React
 
-export Signal, Input, lift, dropif, droprepeats,
-       sampleon, mimewritable, show, display, stringmime
+export Signal, Input, lift,
+       dropif, droprepeats, sampleon
 
-import Base: push!, reduce, merge, Display,
-       show, display, mimewritable, stringmime
-
-if isdefined(Main, :IPythonDisplay)
-    import Main.IPythonDisplay.InlineDisplay
-end
+import Base.push!, Base.reduce, Base.merge,
+       Base.show, Base.display
 
 # A signal is a value that can change over time.
 abstract Signal{T}
@@ -209,7 +205,6 @@ function sampleon{T, U}(s1 :: Signal{T}, s2 :: Signal{U})
         count += 1
         if count == 2
             if ischanged node.value = s2.value end
-
             send(node, timestep, ischanged)
             count = 0
             ischanged = false
@@ -221,44 +216,16 @@ function sampleon{T, U}(s1 :: Signal{T}, s2 :: Signal{U})
     return node
 end
 
-############################################################
-# display methods for Signal data. We try to do in-place
-# updates when IJulia is available.
-
 function show{T}(node :: Signal{T})
     show(node.value)
 end
 
-function display{T}(d :: TextDisplay, signal :: Signal{T})
-    if isa(signal, Input)
-        "<input{$(T)}@$(signal.id)> " * show(signal)
-    else
-        "[$(signal.node_type){$(T)}@$(signal.id)] " * show(signal)
-    end
+function display{T}(d :: TextDisplay, node :: Node{T})
+    return "[$(node.node_type){$(T)}@$(node.id)] " * show(node)
 end
 
-if isdefined(Main, :IJulia) && isdefined(Main, :IPythonDisplay)
-    const ipy_mime = [ "text/html", "text/latex", "image/svg+xml", "image/png", "image/jpeg", "text/plain" ]
-    for mime in ipy_mime
-        @eval begin
-            function display{T}(d::InlineDisplay, ::MIME{symbol($mime)}, x :: Signal{T})
-                send_ipython(publish, 
-                             msg_pub(execute_msg, "display_data",
-                                     ["source" => "julia", # optional
-                                      "metadata" => {reactive=>true, signal_id=>x.id},
-                                      "data" => [$mime => stringmime(MIME($mime), x.value)] ]))
-            end
-        end
-    end
-
-    function display{T}(d::InlineDisplay, x :: Signal{T})
-        undisplay(x) # dequeue previous redisplay(x)
-        send_ipython(publish, 
-                     msg_pub(execute_msg, "display_data",
-                             ["source" => "julia", # optional
-                              "metadata" => {reactive=>true, signal_id=>x.id},
-                              "data" => display_dict(x.value) ]))
-    end
+function display{T}(d :: TextDisplay, node :: Input{T})
+    return "<input{$(T)}@$(node.id)> " *show(node)
 end
 
 end # module
