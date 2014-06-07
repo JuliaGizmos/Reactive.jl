@@ -40,10 +40,10 @@ map(x -> push!(a, x), nums)
 
 @test sum(nums) == f.value
 
-# dropif
+# filter
 g = Input(0)
 pred = x -> x % 2 == 0
-h = dropif(pred, 1, g)
+h = filter(pred, 1, g)
 
 @test h.value == 1
 

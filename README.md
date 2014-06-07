@@ -46,8 +46,9 @@ reduce{T, U}(f :: Function, v0 :: T, signal :: Signal{U})
 # precedence goes to the earlier argument
 merge{T}(signals :: Signal{T}...)
 
-# drop updates based on a predicate
-dropif{T}(pred :: Function, v0 :: T, signal :: Signal)
+# drop updates based on a predicate, use v0 when initial value
+# does not satisfy the predicate
+filter{T}(pred :: Function, v0 :: T, signal :: Signal)
 
 # drop updates with repeating values
 droprepeats{T}(signal :: Signal{T})

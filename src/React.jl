@@ -1,10 +1,10 @@
 module React
 
-export Signal, Input, lift,
-       dropif, droprepeats, sampleon
+export Signal, Input, lift, map, reduce,
+       filter, droprepeats, sampleon
 
-import Base.push!, Base.reduce, Base.merge,
-       Base.show, Base.display
+import Base.push!, Base.reduce, Base.merge, Base.map,
+       Base.show, Base.display, Base.mimewritable
 
 # A signal is a value that can change over time.
 abstract Signal{T}
@@ -171,8 +171,8 @@ function merge{T}(signals :: Signal{T}...)
     return node
 end
 
-function dropif{T}(pred :: Function, v0 :: T, signal :: Signal)
-    node = Node{T}(pred(signal.value) ? v0 : signal.value, :dropif)
+function filter{T}(pred :: Function, v0 :: T, signal :: Signal)
+    node = Node{T}(pred(signal.value) ? v0 : signal.value, :filter)
     function recv(timestep :: Time, changed :: Bool, parent :: Signal)
         change = changed && ~pred(signal.value)
         if change node.value = signal.value end
@@ -215,6 +215,9 @@ function sampleon{T, U}(s1 :: Signal{T}, s2 :: Signal{U})
     node.recv = recv
     return node
 end
+
+#############################################
+# Methods for displaying signals
 
 function show{T}(node :: Signal{T})
     show(node.value)
