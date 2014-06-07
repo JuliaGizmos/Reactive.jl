@@ -3,8 +3,8 @@ module React
 export Signal, Input, lift, map, reduce,
        filter, droprepeats, sampleon
 
-import Base.push!, Base.reduce, Base.merge, Base.map,
-       Base.show, Base.display, Base.mimewritable
+import Base: push!, reduce, merge, map,
+             show, display, mimewritable
 
 # A signal is a value that can change over time.
 abstract Signal{T}
