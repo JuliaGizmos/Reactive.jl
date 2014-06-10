@@ -6,8 +6,6 @@ export Signal, Input, lift, map, reduce,
 import Base: push!, reduce, merge, map,
        show, writemime
 
-import Base.Random: UUID, uuid4
-
 # A signal is a value that can change over time.
 abstract Signal{T}
 
@@ -20,12 +18,11 @@ roots = Signal[]
 # It must be created with a default value, and can be
 # updated with a call to `update`.
 type Input{T} <: Signal{T}
-    id :: UUID
     children :: Set{Signal}
     value :: T
 
     function Input(v :: T)
-        self = new(uuid4(), Set{Signal}(), v)
+        self = new(Set{Signal}(), v)
         push!(roots, self)
         return self
     end
@@ -33,7 +30,6 @@ end
 Input{T}(val :: T) = Input{T}(val)
 
 type Node{T} <: Signal{T}
-    id :: UUID
     children :: Set{Signal}
     node_type :: Symbol
     value :: T
@@ -41,7 +37,7 @@ type Node{T} <: Signal{T}
     recv :: Function
 
     function Node(val :: T, node_type=:Node)
-        new(uuid4(), Set{Signal}(), node_type, val)
+        new(Set{Signal}(), node_type, val)
     end
 end
 
@@ -219,14 +215,12 @@ function show{T}(node :: Signal{T})
 end
 
 function writemime{T}(io :: IO, m :: MIME"text/plain", node :: Node{T})
-    node_id = string(node.id)[1:6]
-    write(io, "[$(node.node_type){$(T)}@$(node_id)] ")
+    write(io, "[$(node.node_type){$(T)}] ")
     writemime(io, m, node.value)
 end
 
 function writemime{T}(io :: IO, m :: MIME"text/plain", node :: Input{T})
-    node_id = string(node.id)[1:6]
-    write(io, "<input{$(T)}@$(node_id)> ")
+    write(io, "<input{$(T)}> ")
     writemime(io, m, node.value)
 end
 
