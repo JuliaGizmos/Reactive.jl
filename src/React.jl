@@ -4,20 +4,14 @@ export Signal, Input, lift, map, reduce,
        filter, droprepeats, sampleon
 
 import Base: push!, reduce, merge, map,
-             show, display, mimewritable
+       show, writemime
+
+import Base.Random: UUID, uuid4
 
 # A signal is a value that can change over time.
 abstract Signal{T}
 
 typealias Time Float64
-
-# Unique ID
-typealias UID Int
-
-begin
-    local last_id = 0
-    guid() = last_id += 1
-end
 
 # Root nodes of the graph
 roots = Signal[]
@@ -26,12 +20,12 @@ roots = Signal[]
 # It must be created with a default value, and can be
 # updated with a call to `update`.
 type Input{T} <: Signal{T}
-    id :: UID
+    id :: UUID
     children :: Set{Signal}
     value :: T
 
     function Input(v :: T)
-        self = new(guid(), Set{Signal}(), v)
+        self = new(uuid4(), Set{Signal}(), v)
         push!(roots, self)
         return self
     end
@@ -39,7 +33,7 @@ end
 Input{T}(val :: T) = Input{T}(val)
 
 type Node{T} <: Signal{T}
-    id :: UID
+    id :: UUID
     children :: Set{Signal}
     node_type :: Symbol
     value :: T
@@ -47,7 +41,7 @@ type Node{T} <: Signal{T}
     recv :: Function
 
     function Node(val :: T, node_type=:Node)
-        new(guid(), Set{Signal}(), node_type, val)
+        new(uuid4(), Set{Signal}(), node_type, val)
     end
 end
 
