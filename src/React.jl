@@ -218,12 +218,16 @@ function show{T}(node :: Signal{T})
     show(node.value)
 end
 
-function display{T}(d :: TextDisplay, node :: Node{T})
-    return "[$(node.node_type){$(T)}@$(node.id)] " * show(node)
+function writemime{T}(io :: IO, m :: MIME"text/plain", node :: Node{T})
+    node_id = string(node.id)[1:6]
+    write(io, "[$(node.node_type){$(T)}@$(node_id)] ")
+    writemime(io, m, node.value)
 end
 
-function display{T}(d :: TextDisplay, node :: Input{T})
-    return "<input{$(T)}@$(node.id)> " *show(node)
+function writemime{T}(io :: IO, m :: MIME"text/plain", node :: Input{T})
+    node_id = string(node.id)[1:6]
+    write(io, "<input{$(T)}@$(node_id)> ")
+    writemime(io, m, node.value)
 end
 
 end # module
