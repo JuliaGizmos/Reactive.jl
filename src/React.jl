@@ -84,6 +84,7 @@ begin
         pushing = false
     end
 end
+push!{T}(inp :: Input{T}, value) = push!(inp, convert(T, value))
 
 function lift(output_type :: DataType, f :: Function,
               inputs :: Signal...)
