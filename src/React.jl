@@ -4,7 +4,7 @@ export Signal, Input, lift, map, reduce,
        filter, droprepeats, sampleon
 
 import Base: push!, reduce, merge, map,
-       show, writemime
+       show, writemime, filter
 
 # A signal is a value that can change over time.
 abstract Signal{T}
