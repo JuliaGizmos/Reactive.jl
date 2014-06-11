@@ -120,13 +120,17 @@ end
 type Merge{T} <: Node{T}
     children :: Vector{Signal}
     signals :: (Signal{T}...)
+    ranks :: Dict{Signal, Int}
     value :: T
     function Merge(signals :: Signal...)
         if length(signals) < 1
             error("Merge requires at least one as argument.")
         end
         fst, _ = signals
-        node = new(Signal[], signals, fst.value)
+        node = new(Signal[], signals, Dict{Signal, Int}(), fst.value)
+        for (r, s) in enumerate(signals)
+            node.ranks[s] = r # precedence
+        end
         order_append!(node)
         add_child!(signals, node)
         return node
@@ -161,7 +165,13 @@ function push!{T}(inp :: Input{T}, val :: T)
 
     heap = (Signal, Signal)[] # a topological min-heap
     ord = By(a -> topo_rank[a[1]])
+
+    # first dirty parent
+    merge_parent = Dict{Merge, Signal}()
     for c in inp.children
+        if isa(c, Merge)
+            merge_parent[c] = inp
+        end
         heappush!(heap, (c, inp), ord)
     end
 
@@ -171,8 +181,25 @@ function push!{T}(inp :: Input{T}, val :: T)
         if n == prev
             continue # already processed
         end
-        if update(n, parent)
+
+        # Merge is a special case!
+        if isa(n, Merge) && haskey(merge_parent, n)
+            propagate = update(n, merge_parent[n])
+        else
+            propagate = update(n, parent)
+        end
+
+        if propagate
             for c in n.children
+                if isa(c, Merge)
+                    if haskey(merge_parent, c)
+                        if c.ranks[n] < c.ranks[merge_parent[c]]
+                            merge_parent[c] = n
+                        end
+                    else
+                        merge_parent[c] = n
+                    end
+                end
                 heappush!(heap, (c, n), ord)
             end
         end
