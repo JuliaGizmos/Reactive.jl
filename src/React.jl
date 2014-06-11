@@ -1,7 +1,10 @@
 module React
 
-export Signal, Input, lift, map, reduce,
-       filter, droprepeats, sampleon
+using Base.Order
+using Base.Collections
+
+export Signal, Input, Node, lift, map, reduce,
+       merge, filter, droprepeats, sampleon
 
 import Base: push!, reduce, merge, map,
        show, writemime
@@ -11,8 +14,20 @@ abstract Signal{T}
 
 typealias Time Float64
 
-# Root nodes of the graph
-roots = Signal[]
+# A topological order
+begin
+    local counter = uint(1)
+    const topo_rank = Dict{Signal, Uint}()
+
+    function order_append!(s :: Signal)
+        topo_rank[s] = counter
+        counter += 1
+    end
+
+    function order_delete!(s :: Signal)
+        delete!(topo_rank, s)
+    end
+end
 
 # An input is a root node in the signal graph.
 # It must be created with a default value, and can be
@@ -22,96 +37,160 @@ type Input{T} <: Signal{T}
     value :: T
 
     function Input(v :: T)
-        self = new([], v)
-        push!(roots, self)
+        self = new(Signal[], v)
+        order_append!(self)
         return self
     end
 end
 Input{T}(val :: T) = Input{T}(val)
 
-type Node{T} <: Signal{T}
+abstract Node{T} <: Signal{T} # An intermediate node
+
+function add_child!(parents :: (Signal...), child :: Signal)
+    for p in parents
+        push!(p.children, child)
+    end
+end
+add_child!(parent :: Signal, child :: Signal) = push!(parent.children, child)
+
+type Lift{T} <: Node{T}
     children :: Vector{Signal}
-    node_type :: Symbol
+    f :: Function
+    signals :: (Signal...)
     value :: T
-
-    recv :: Function
-
-    function Node(val :: T, node_type=:Node)
-        new([], node_type, val)
+    function Lift(f :: Function, signals :: Signal...)
+        apply_f() = apply(f, [s.value for s in signals]) :: T
+        node = new(Signal[], apply_f, signals, apply_f())
+        order_append!(node)
+        add_child!(signals, node)
+        return node
     end
 end
 
-function send{T}(node :: Signal{T}, timestep :: Time, changed :: Bool)
-    for child in node.children
-        child.recv(timestep, changed, node)
+function update{T, U}(node :: Lift{T}, parent :: Signal{U})
+    node.value = node.f()
+    return true
+end
+
+type Filter{T} <: Node{T}
+    children :: Vector{Signal}
+    predicate :: Function
+    signal :: Signal{T}
+    value :: T
+    function Filter(predicate :: Function, v0 :: T, signal :: Signal{T})
+        node = new(Signal[], predicate, signal,
+                   predicate(signal.value) ?
+                   signal.value : v0)
+        order_append!(node)
+        add_child!(signal, node)
+        return node
     end
 end
 
-# recv is called by update
-function recv{T, U}(inp :: Input{T}, timestep :: Time,
-                 originator :: Signal{U}, val :: U)
-    # Forward it to children
-    changed = originator == inp
-    if changed
-        inp.value = val
+function update{T}(node :: Filter{T}, parent :: Signal{T})
+    if node.predicate(node.signal.value)
+        node.value = node.signal.value
+        return true
+    else
+        return false
     end
-    send(inp, timestep, changed)
 end
 
-# update method on an Input updates its value
-# and notifies all dependent signals.
-begin
-    local pushing = false
-    function push!{T}(inp :: Input{T}, value :: T)
-        if pushing
-            error("Encountered a signal loop! Did you call push! inside a lift?")
+type DropRepeats{T} <: Node{T}
+    children :: Vector{Signal}
+    signal :: Signal{T}
+    value :: T
+    function DropRepeats(signal :: Signal{T})
+        node = new(Signal[], signal, signal.value)
+        order_append!(node)
+        add_child!(signal, node)
+        return node
+    end
+end
+
+function update{T}(node :: DropRepeats{T}, parent :: Signal{T})
+    if node.value != parent.value
+        node.value = parent.value
+        return true
+    else
+        return false
+    end
+end
+
+type Merge{T} <: Node{T}
+    children :: Vector{Signal}
+    signals :: (Signal{T}...)
+    value :: T
+    function Merge(signals :: Signal...)
+        if length(signals) < 1
+            error("Merge requires at least one as argument.")
         end
-        pushing = true
-        timestep = time()
-        for node in roots
-            recv(node, timestep, inp, value)
-        end
-        pushing = false
+        fst, _ = signals
+        node = new(Signal[], signals, fst.value)
+        order_append!(node)
+        add_child!(signals, node)
+        return node
     end
 end
-push!{T}(inp :: Input{T}, value) = push!(inp, convert(T, value))
 
-function lift(output_type :: DataType, f :: Function,
-              inputs :: Signal...)
-    local count = 0,
-          n = length(inputs),
-          ischanged = false # accumulate change info
-    apply_f() = apply(f, [i.value for i in inputs])
-    node = Node{output_type}(apply_f(), :lift)
+function update{T}(node :: Merge{T}, parent :: Signal{T})
+    node.value = parent.value
+    return true
+end
 
-    function recv(timestep :: Time, changed :: Bool, parent :: Signal)
-        count += 1
-        if changed
-            ischanged = true
+type SampleOn{T, U} <: Node{U}
+    children :: Vector{Signal}
+    signal1 :: Signal{T}
+    signal2 :: Signal{U}
+    value :: U
+    function SampleOn(signal1, signal2)
+        node = new(Signal[], signal1, signal2, signal2.value)
+        order_append!(node)
+        add_child!(signal1, node)
+        return node
+    end
+end
+
+function update{T, U}(node :: SampleOn{T, U}, parent :: Signal{T})
+    node.value = node.signal2.value
+    return true
+end
+
+function push!{T}(inp :: Input{T}, val :: T)
+    inp.value = val
+
+    heap = (Signal, Signal)[] # a topological min-heap
+    ord = By(a -> topo_rank[a[1]])
+    for c in inp.children
+        heappush!(heap, (c, inp), ord)
+    end
+
+    prev = nothing
+    while !isempty(heap)
+        (n, parent) = heappop!(heap, ord)
+        if n == prev
+            continue # already processed
         end
-
-        if count == n
-            if ischanged
-                # counting makes sure apply_f is called
-                # just once in a given timestep
-                node.value = apply_f()
+        if update(n, parent)
+            for c in n.children
+                heappush!(heap, (c, n), ord)
             end
-            send(node, timestep, ischanged)
-            ischanged = false
-            count = 0
         end
+        prev = n
     end
-    node.recv = recv
-
-    for i in inputs
-        push!(i.children, node)
-    end
-    return node
 end
+push!{T}(inp :: Input{T}, val) = convert(T, val)
 
-lift(f :: Function, inputs :: Signal...) = lift(Any, f, inputs...)
-map(T :: DataType, f :: Function, input :: Signal) = lift(T, f, input)
-map(f :: Function, input :: Signal) = lift(f, input)
+lift(output_type::Type, f :: Function, inputs :: Signal...) =
+    Lift{output_type}(f, inputs...)
+
+lift(f :: Function, inputs :: Signal...) =
+    lift(Any, f, inputs...)
+
+sampleon{T, U}(s1 :: Signal{T}, s2 :: Signal{U}) = SampleOn{T, U}(s1, s2)
+filter{T}(pred :: Function, v0 :: T, s :: Signal{T}) = Filter{T}(pred, v0, s)
+merge{T}(signals :: Signal{T}...) = Merge{T}(signals...)
+droprepeats{T}(signal :: Signal{T}) = DropRepeats{T}(signal :: Signal)
 
 # reduce over a stream of updates
 function reduce{T, U}(f :: Function, v0 :: T, signal :: Signal{U})
@@ -122,91 +201,6 @@ function reduce{T, U}(f :: Function, v0 :: T, signal :: Signal{U})
     lift(T, foldp, signal)
 end
 
-# merge signals
-function merge{T}(signals :: Signal{T}...)
-
-    first, _ = signals
-    node = Node{T}(first.value, :merge)
-    rank = {n => i for (i, n) in enumerate(signals)}
-    
-    local n = length(signals), count = 0, ischanged = false,
-          minrank = n+1, val = node.value
-
-    function recv(timestep :: Time, changed :: Bool, parent :: Signal)
-        count += 1
-        if changed
-            ischanged = true
-            if haskey(rank, parent)
-                if minrank > rank[parent]
-                    val = parent.value
-                    minrank = rank[parent]
-                end
-            end
-        end
-        if count == n
-            if ischanged
-                node.value = val
-                minrank = n+1
-            end
-            send(node, timestep, ischanged)
-            ischanged = false
-            count = 0
-        end
-    end
-
-    for sig in signals
-        push!(sig.children, node)
-    end
-    node.recv = recv
-
-    return node
-end
-
-function filter{T}(pred :: Function, v0 :: T, signal :: Signal)
-    node = Node{T}(pred(signal.value) ? v0 : signal.value, :filter)
-    function recv(timestep :: Time, changed :: Bool, parent :: Signal)
-        change = changed && ~pred(signal.value)
-        if change node.value = signal.value end
-        send(node, timestep, change)
-    end
-    push!(signal.children, node)
-    node.recv = recv
-    return node
-end
-
-function droprepeats{T}(signal :: Signal{T})
-    node = Node{T}(signal.value, :droprepeats)
-    function recv(timestep :: Time, changed :: Bool, parent :: Signal)
-        change = changed && node.value != signal.value
-        if change
-            node.value = signal.value
-        end
-        send(node, timestep, change)
-    end
-    push!(signal.children, node)
-    node.recv = recv
-    return node
-end
-
-function sampleon{T, U}(s1 :: Signal{T}, s2 :: Signal{U})
-    node = Node{U}(s2.value, :sampleon)
-    local count = 0
-    function recv(timestep :: Time, changed :: Bool, parent :: Signal)
-        ischanged = parent == s1 ? changed : false;
-        count += 1
-        if count == 2
-            if ischanged node.value = s2.value end
-            send(node, timestep, ischanged)
-            count = 0
-            ischanged = false
-        end
-    end
-    push!(s1.children, node)
-    push!(s2.children, node)
-    node.recv = recv
-    return node
-end
-
 #############################################
 # Methods for displaying signals
 
@@ -214,13 +208,8 @@ function show{T}(node :: Signal{T})
     show(node.value)
 end
 
-function writemime{T}(io :: IO, m :: MIME"text/plain", node :: Node{T})
-    write(io, "[$(node.node_type){$(T)}] ")
-    writemime(io, m, node.value)
-end
-
-function writemime{T}(io :: IO, m :: MIME"text/plain", node :: Input{T})
-    write(io, "<input{$(T)}> ")
+function writemime{T}(io :: IO, m :: MIME"text/plain", node :: Signal{T})
+    write(io, "[$(typeof(node))] ")
     writemime(io, m, node.value)
 end
 
