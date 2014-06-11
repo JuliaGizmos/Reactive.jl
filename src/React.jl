@@ -18,11 +18,11 @@ roots = Signal[]
 # It must be created with a default value, and can be
 # updated with a call to `update`.
 type Input{T} <: Signal{T}
-    children :: Set{Signal}
+    children :: Vector{Signal}
     value :: T
 
     function Input(v :: T)
-        self = new(Set{Signal}(), v)
+        self = new([], v)
         push!(roots, self)
         return self
     end
@@ -30,14 +30,14 @@ end
 Input{T}(val :: T) = Input{T}(val)
 
 type Node{T} <: Signal{T}
-    children :: Set{Signal}
+    children :: Vector{Signal}
     node_type :: Symbol
     value :: T
 
     recv :: Function
 
     function Node(val :: T, node_type=:Node)
-        new(Set{Signal}(), node_type, val)
+        new([], node_type, val)
     end
 end
 
