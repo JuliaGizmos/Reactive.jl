@@ -206,7 +206,7 @@ function push!{T}(inp :: Input{T}, val :: T)
         prev = n
     end
 end
-push!{T}(inp :: Input{T}, val) = convert(T, val)
+push!{T}(inp :: Input{T}, val) = push!(inp, convert(T, val))
 
 lift(output_type::Type, f :: Function, inputs :: Signal...) =
     Lift{output_type}(f, inputs...)

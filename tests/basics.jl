@@ -9,9 +9,9 @@ a = Input(number())
 b = lift(Int, x -> x*x, a)
 
 # type conversion
-## push!(a, 1.0)
-## @test b.value == 1
-## @test_throws push!(a, 1.1) # inexact error
+push!(a, 1.0)
+@test b.value == 1
+@test_throws push!(a, 1.1) # inexact error
 
 push!(a, number())
 @test b.value == a.value*a.value
