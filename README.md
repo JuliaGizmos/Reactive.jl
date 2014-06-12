@@ -29,7 +29,7 @@ a
 #=> [Input{Int64}] 7
 
 lift(f :: Function, output_type :: Type, inputs :: Signal...)
-b = lift(Int, x->x*x, a) # transform a to its square
+b = lift(x->x*x, Int, a) # transform a to its square
 #=> [Lift{Int64}] 49
 push!(a, 6)
 #=> nothing
