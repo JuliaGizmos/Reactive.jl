@@ -11,7 +11,7 @@ d = merge(a, b)
 e = lift(+, Int, a, lift(x->2x, Int, a)) # Both depend on a
 f = lift(+, Int, a, b, c, e)
 
-count = s -> reduce((x, y) -> x+1, 0, s)
+count = s -> foldl((x, y) -> x+1, 0, s)
 
 ca = count(a)
 cb = count(b)

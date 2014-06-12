@@ -37,9 +37,9 @@ push!(a, number())
 # precedence to b over a
 @test e.value == b.value
 
-## reduce over time
+## foldl over time
 push!(a, 0)
-f = reduce(+, 0, a)
+f = foldl(+, 0, a)
 nums = int(rand(100)*1000)
 map(x -> push!(a, x), nums)
 
@@ -71,7 +71,7 @@ push!(i, true)
 @test j.value == g.value
 
 # droprepeats
-count = s -> reduce((x, y) -> x+1, 0, s)
+count = s -> foldl((x, y) -> x+1, 0, s)
 
 k = Input(1)
 l = droprepeats(k)

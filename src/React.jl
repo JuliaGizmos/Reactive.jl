@@ -3,10 +3,10 @@ module React
 using Base.Order
 using Base.Collections
 
-export Signal, Input, Node, lift, map, reduce,
+export Signal, Input, Node, lift, map, foldl, foldr,
        merge, filter, droprepeats, sampleon
 
-import Base: push!, reduce, merge, map,
+import Base: push!, foldl, foldr, merge, map,
        show, writemime, filter
 
 # A signal is a value that can change over time.
@@ -213,13 +213,14 @@ filter{T}(pred :: Function, v0 :: T, s :: Signal{T}) = Filter{T}(pred, v0, s)
 merge{T}(signals :: Signal{T}...) = Merge{T}(signals...)
 droprepeats{T}(signal :: Signal{T}) = DropRepeats{T}(signal :: Signal)
 
-# reduce over a stream of updates
-function reduce{T, U}(f :: Function, v0 :: T, signal :: Signal{U})
+function foldl{T}(f::Function, v0::T, signal::Signal)
     local a = v0
-    function foldp(b)
-        a = f(a, b)
-    end
-    lift(foldp, T, signal)
+    lift(b -> (a = f(a, b)), T, signal)
+end
+
+function foldr{T}(f::Function, v0::T, signal::Signal)
+    local a = v0
+    lift(b -> (a = f(b, a)), T, signal)
 end
 
 #############################################
