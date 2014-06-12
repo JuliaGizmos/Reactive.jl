@@ -6,10 +6,10 @@ number() = int(rand()*100)
 a = Input(0)
 b = Input(0)
 
-c = lift(Int, +, a, b)
+c = lift(+, Int, a, b)
 d = merge(a, b)
-e = lift(Int, +, a, lift(Int, x->2x, a)) # Both depend on a
-f = lift(Int, +, a, b, c, e)
+e = lift(+, Int, a, lift(x->2x, Int, a)) # Both depend on a
+f = lift(+, Int, a, b, c, e)
 
 count = s -> reduce((x, y) -> x+1, 0, s)
 

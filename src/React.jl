@@ -12,8 +12,6 @@ import Base: push!, reduce, merge, map,
 # A signal is a value that can change over time.
 abstract Signal{T}
 
-typealias Time Float64
-
 # A topological order
 begin
     local counter = uint(1)
@@ -208,11 +206,11 @@ function push!{T}(inp :: Input{T}, val :: T)
 end
 push!{T}(inp :: Input{T}, val) = push!(inp, convert(T, val))
 
-lift(output_type::Type, f :: Function, inputs :: Signal...) =
+lift(f :: Function, output_type :: Type, inputs :: Signal...) =
     Lift{output_type}(f, inputs...)
 
 lift(f :: Function, inputs :: Signal...) =
-    lift(Any, f, inputs...)
+    lift(f, Any, inputs...)
 
 sampleon{T, U}(s1 :: Signal{T}, s2 :: Signal{U}) = SampleOn{T, U}(s1, s2)
 filter{T}(pred :: Function, v0 :: T, s :: Signal{T}) = Filter{T}(pred, v0, s)
@@ -225,7 +223,7 @@ function reduce{T, U}(f :: Function, v0 :: T, signal :: Signal{U})
     function foldp(b)
         a = f(a, b)
     end
-    lift(T, foldp, signal)
+    lift(foldp, T, signal)
 end
 
 #############################################
