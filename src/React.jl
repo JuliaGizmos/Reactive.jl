@@ -53,15 +53,15 @@ type Lift{T} <: Node{T}
     signals :: (Signal...)
     value :: T
     function Lift(f :: Function, signals :: Signal...)
-        apply_f() = apply(f, [s.value for s in signals]) :: T
-        node = new(next_rank(), Signal[], apply_f, signals, apply_f())
+        node = new(next_rank(), Signal[], f, signals,
+                   convert(T, f([s.value for s in signals]...)))
         add_child!(signals, node)
         return node
     end
 end
 
 function update{T, U}(node :: Lift{T}, parent :: Signal{U})
-    node.value = node.f()
+    node.value = convert(T, node.f([s.value for s in node.signals]...))
     return true
 end
 
