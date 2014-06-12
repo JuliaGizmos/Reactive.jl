@@ -20,27 +20,28 @@ using React
 abstract Signal{T} # A signal is a time varying value
 Input{T} <: Signal{T}  # An input signal -> root node in the signal graph
 a = Input(0) # Create an input signal with default value 0
-#=> <input{Int64}@1> 0
+#=> [Input{Int64}] 0
 
 push!{T}(inp :: Input{T}, value :: T)
 push!(a, 7) # Update the current value of signal a
 #=> nothing
 a
-#=> <input{Int64}@1> 7
+#=> [Input{Int64}] 7
 
-lift(output_type :: DataType, f :: Function, inputs :: Signal...)
+lift(f :: Function, output_type :: Type, inputs :: Signal...)
 b = lift(Int, x->x*x, a) # transform a to its square
-#=> [lift{Int64}@2] 49
+#=> [Lift{Int64}] 49
 push!(a, 6)
 #=> nothing
 b
-#=> [lift{Int64}@2] 36
-c = lift(Int, +, a, b) # lift can combine more than one signals
-#=> [lift{Int64}@3] 42
+#=> [Lift{Int64}] 36
+c = lift(+, Int, a, b) # lift can combine more than one signals
+#=> [Lift{Int64}] 42
 
 # Other methods
-# reduce over a sequence of updates
-reduce{T, U}(f :: Function, v0 :: T, signal :: Signal{U})
+# foldl and foldr over a sequence of updates
+foldl{T, U}(f :: Function, v0 :: T, signal :: Signal{U})
+foldr{T, U}(f :: Function, v0 :: T, signal :: Signal{U})
 
 # merge two or more signals of the same type into one
 # precedence goes to the earlier argument
