@@ -28,14 +28,14 @@ push!(a, number())
 
 ## Merge
 d = Input(number())
-e = merge(d, a, b)
+e = merge(d, b, a)
 
 # precedence to d
 @test e.value == d.value
 
 push!(a, number())
-# precedence to a over b
-@test e.value == a.value
+# precedence to b over a
+@test e.value == b.value
 
 ## reduce over time
 push!(a, 0)
@@ -47,7 +47,7 @@ map(x -> push!(a, x), nums)
 
 # filter
 g = Input(0)
-pred = x -> x % 2 == 0
+pred = x -> x % 2 != 0
 h = filter(pred, 1, g)
 
 @test h.value == 1
