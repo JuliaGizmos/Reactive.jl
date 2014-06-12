@@ -6,7 +6,7 @@ number() = int(rand()*1000)
 ## Basics
 
 a = Input(number())
-b = lift(Int, x -> x*x, a)
+b = lift(x -> x*x, Int, a)
 
 # type conversion
 push!(a, 1.0)
@@ -20,7 +20,7 @@ push!(a, -number())
 @test b.value == a.value*a.value
 
 ## Multiple inputs to Lift
-c = lift(Int, +, a, b)
+c = lift(+, Int, a, b)
 @test c.value == a.value + b.value
 
 push!(a, number())
