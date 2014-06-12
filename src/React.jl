@@ -14,16 +14,11 @@ abstract Signal{T}
 
 # A topological order
 begin
-    local counter = uint(1)
-    const topo_rank = Dict{Signal, Uint}()
+    local counter = uint(0)
 
-    function order_append!(s :: Signal)
-        topo_rank[s] = counter
+    function next_rank()
         counter += 1
-    end
-
-    function order_delete!(s :: Signal)
-        delete!(topo_rank, s)
+        return counter
     end
 end
 
@@ -31,12 +26,12 @@ end
 # It must be created with a default value, and can be
 # updated with a call to `update`.
 type Input{T} <: Signal{T}
+    rank :: Uint
     children :: Vector{Signal}
     value :: T
 
     function Input(v :: T)
-        self = new(Signal[], v)
-        order_append!(self)
+        self = new(next_rank(), Signal[], v)
         return self
     end
 end
@@ -52,14 +47,14 @@ end
 add_child!(parent :: Signal, child :: Signal) = push!(parent.children, child)
 
 type Lift{T} <: Node{T}
+    rank :: Uint
     children :: Vector{Signal}
     f :: Function
     signals :: (Signal...)
     value :: T
     function Lift(f :: Function, signals :: Signal...)
         apply_f() = apply(f, [s.value for s in signals]) :: T
-        node = new(Signal[], apply_f, signals, apply_f())
-        order_append!(node)
+        node = new(next_rank(), Signal[], apply_f, signals, apply_f())
         add_child!(signals, node)
         return node
     end
@@ -71,15 +66,15 @@ function update{T, U}(node :: Lift{T}, parent :: Signal{U})
 end
 
 type Filter{T} <: Node{T}
+    rank :: Uint
     children :: Vector{Signal}
     predicate :: Function
     signal :: Signal{T}
     value :: T
     function Filter(predicate :: Function, v0 :: T, signal :: Signal{T})
-        node = new(Signal[], predicate, signal,
+        node = new(next_rank(), Signal[], predicate, signal,
                    predicate(signal.value) ?
                    signal.value : v0)
-        order_append!(node)
         add_child!(signal, node)
         return node
     end
@@ -95,12 +90,12 @@ function update{T}(node :: Filter{T}, parent :: Signal{T})
 end
 
 type DropRepeats{T} <: Node{T}
+    rank :: Uint
     children :: Vector{Signal}
     signal :: Signal{T}
     value :: T
     function DropRepeats(signal :: Signal{T})
-        node = new(Signal[], signal, signal.value)
-        order_append!(node)
+        node = new(next_rank(), Signal[], signal, signal.value)
         add_child!(signal, node)
         return node
     end
@@ -116,6 +111,7 @@ function update{T}(node :: DropRepeats{T}, parent :: Signal{T})
 end
 
 type Merge{T} <: Node{T}
+    rank :: Uint
     children :: Vector{Signal}
     signals :: (Signal{T}...)
     ranks :: Dict{Signal, Int}
@@ -125,11 +121,11 @@ type Merge{T} <: Node{T}
             error("Merge requires at least one as argument.")
         end
         fst, _ = signals
-        node = new(Signal[], signals, Dict{Signal, Int}(), fst.value)
+        node = new(next_rank(), Signal[], signals,
+                   Dict{Signal, Int}(), fst.value)
         for (r, s) in enumerate(signals)
             node.ranks[s] = r # precedence
         end
-        order_append!(node)
         add_child!(signals, node)
         return node
     end
@@ -141,13 +137,13 @@ function update{T}(node :: Merge{T}, parent :: Signal{T})
 end
 
 type SampleOn{T, U} <: Node{U}
+    rank :: Uint
     children :: Vector{Signal}
     signal1 :: Signal{T}
     signal2 :: Signal{U}
     value :: U
     function SampleOn(signal1, signal2)
-        node = new(Signal[], signal1, signal2, signal2.value)
-        order_append!(node)
+        node = new(next_rank(), Signal[], signal1, signal2, signal2.value)
         add_child!(signal1, node)
         return node
     end
@@ -161,8 +157,8 @@ end
 function push!{T}(inp :: Input{T}, val :: T)
     inp.value = val
 
-    heap = (Signal, Signal)[] # a topological min-heap
-    ord = By(a -> topo_rank[a[1]])
+    heap = (Signal, Signal)[] # a min-heap of (child, parent)
+    ord = By(a -> a[1].rank)  # ordered topologically by child.rank
 
     # first dirty parent
     merge_parent = Dict{Merge, Signal}()
