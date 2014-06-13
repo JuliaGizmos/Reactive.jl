@@ -9,7 +9,7 @@ This is heavily inspired by [Elm](http://elm-lang.org/)'s [Signal library](http:
 ## Installation
 
 ```julia
-Pkg.clone("git://github.com/shashi/React.jl.git")
+Pkg.add("React")
 ```
 
 ## Usage
