@@ -3,8 +3,8 @@ module React
 using Base.Order
 using Base.Collections
 
-export Signal, Input, Node, lift, map, foldl, foldr,
-       merge, filter, droprepeats, sampleon
+export Signal, Input, Node, signal, lift, map, foldl,
+       foldr, merge, filter, droprepeats, sampleon
 
 import Base: push!, foldl, foldr, merge, map,
        show, writemime, filter
@@ -21,6 +21,8 @@ begin
         return counter
     end
 end
+
+signal(x :: Signal) = x
 
 # An input is a root node in the signal graph.
 # It must be created with a default value, and can be
@@ -71,11 +73,11 @@ type Filter{T} <: Node{T}
     predicate :: Function
     signal :: Signal{T}
     value :: T
-    function Filter(predicate :: Function, v0 :: T, signal :: Signal{T})
-        node = new(next_rank(), Signal[], predicate, signal,
-                   predicate(signal.value) ?
-                   signal.value : v0)
-        add_child!(signal, node)
+    function Filter(predicate :: Function, v0 :: T, s :: Signal{T})
+        node = new(next_rank(), Signal[], predicate, s,
+                   predicate(s.value) ?
+                   s.value : v0)
+        add_child!(s, node)
         return node
     end
 end
@@ -94,9 +96,9 @@ type DropRepeats{T} <: Node{T}
     children :: Vector{Signal}
     signal :: Signal{T}
     value :: T
-    function DropRepeats(signal :: Signal{T})
-        node = new(next_rank(), Signal[], signal, signal.value)
-        add_child!(signal, node)
+    function DropRepeats(s :: Signal{T})
+        node = new(next_rank(), Signal[], s, s.value)
+        add_child!(s, node)
         return node
     end
 end
@@ -205,22 +207,28 @@ push!{T}(inp :: Input{T}, val) = push!(inp, convert(T, val))
 lift(f :: Function, output_type :: Type, inputs :: Signal...) =
     Lift{output_type}(f, inputs...)
 
-lift(f :: Function, inputs :: Signal...) =
+lift(f :: Function, output_type :: Type, inputs) =
+    Lift{output_type}(f, map(signal, inputs)...)
+
+lift(f :: Function, inputs...) =
     lift(f, Any, inputs...)
 
 sampleon{T, U}(s1 :: Signal{T}, s2 :: Signal{U}) = SampleOn{T, U}(s1, s2)
+sampleon(s1, s2) = sampleon(signal(s1), signal(s2))
 filter{T}(pred :: Function, v0 :: T, s :: Signal{T}) = Filter{T}(pred, v0, s)
 merge{T}(signals :: Signal{T}...) = Merge{T}(signals...)
-droprepeats{T}(signal :: Signal{T}) = DropRepeats{T}(signal :: Signal)
+merge(signals) = merge(map(signal, signals)...)
+droprepeats{T}(s :: Signal{T}) = DropRepeats{T}(s :: Signal)
+droprepeats(s) = droprepeats(signal(s))
 
-function foldl{T}(f::Function, v0::T, signal::Signal)
+function foldl{T}(f::Function, v0::T, s::Signal)
     local a = v0
-    lift(b -> (a = f(a, b)), T, signal)
+    lift(b -> (a = f(a, b)), T, s)
 end
 
-function foldr{T}(f::Function, v0::T, signal::Signal)
+function foldr{T}(f::Function, v0::T, s::Signal)
     local a = v0
-    lift(b -> (a = f(b, a)), T, signal)
+    lift(b -> (a = f(b, a)), T, s)
 end
 
 #############################################
