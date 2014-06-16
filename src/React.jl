@@ -156,52 +156,61 @@ function update{T, U}(node :: SampleOn{T, U}, parent :: Signal{T})
     return true
 end
 
-function push!{T}(inp :: Input{T}, val :: T)
-    inp.value = val
-
-    heap = (Signal, Signal)[] # a min-heap of (child, parent)
-    ord = By(a -> a[1].rank)  # ordered topologically by child.rank
-
-    # first dirty parent
-    merge_parent = Dict{Merge, Signal}()
-    for c in inp.children
-        if isa(c, Merge)
-            merge_parent[c] = inp
+begin
+    local isupdating = false
+    function push!{T}(inp :: Input{T}, val :: T)
+        if isupdating
+            error("calling push! inside a lift is prohibited.")
         end
-        heappush!(heap, (c, inp), ord)
-    end
+        isupdating = true
+        inp.value = val
 
-    prev = nothing
-    while !isempty(heap)
-        (n, parent) = heappop!(heap, ord)
-        if n == prev
-            continue # already processed
-        end
+        heap = (Signal, Signal)[] # a min-heap of (child, parent)
+        ord = By(a -> a[1].rank)  # ordered topologically by child.rank
 
-        # Merge is a special case!
-        if isa(n, Merge) && haskey(merge_parent, n)
-            propagate = update(n, merge_parent[n])
-        else
-            propagate = update(n, parent)
+        # first dirty parent
+        merge_parent = Dict{Merge, Signal}()
+        for c in inp.children
+            if isa(c, Merge)
+                merge_parent[c] = inp
+            end
+            heappush!(heap, (c, inp), ord)
         end
 
-        if propagate
-            for c in n.children
-                if isa(c, Merge)
-                    if haskey(merge_parent, c)
-                        if c.ranks[n] < c.ranks[merge_parent[c]]
+        prev = nothing
+        while !isempty(heap)
+            (n, parent) = heappop!(heap, ord)
+            if n == prev
+                continue # already processed
+            end
+
+            # Merge is a special case!
+            if isa(n, Merge) && haskey(merge_parent, n)
+                propagate = update(n, merge_parent[n])
+            else
+                propagate = update(n, parent)
+            end
+
+            if propagate
+                for c in n.children
+                    if isa(c, Merge)
+                        if haskey(merge_parent, c)
+                            if c.ranks[n] < c.ranks[merge_parent[c]]
+                                merge_parent[c] = n
+                            end
+                        else
                             merge_parent[c] = n
                         end
-                    else
-                        merge_parent[c] = n
                     end
+                    heappush!(heap, (c, n), ord)
                 end
-                heappush!(heap, (c, n), ord)
             end
+            prev = n
         end
-        prev = n
+        isupdating = false
     end
 end
+
 push!{T}(inp :: Input{T}, val) = push!(inp, convert(T, val))
 
 lift(f :: Function, output_type :: Type, inputs :: Signal...) =

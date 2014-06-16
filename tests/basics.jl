@@ -11,7 +11,7 @@ b = lift(x -> x*x, Int, a)
 # type conversion
 push!(a, 1.0)
 @test b.value == 1
-@test_throws push!(a, 1.1) # inexact error
+@test_throws InexactError push!(a, 1.1) # inexact error
 
 push!(a, number())
 @test b.value == a.value*a.value
