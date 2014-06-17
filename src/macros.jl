@@ -1,24 +1,68 @@
-# return a list of symbols in expr that f applies to.
-function find_applicable(ex::Expr, f::Function)
-    unique(find_applicable!(Symbol[], current_module(), ex, f))
+# evaluate as much of an expression as you can
+function sub_val(x, m::Module)
+    try
+        eval(m, x)
+    catch MethodError e
+        return x
+    end
 end
 
-find_applicable!(L::Vector{Symbol}, M::Module, ex, f::Function) = L
-function find_applicable!(L::Vector{Symbol}, M::Module, ex::Symbol, f::Function)
-    isdefined(M, ex) && applicable(f, eval(M, ex)) ? push!(L, ex) : L
-end   
-function find_applicable!(L::Vector{Symbol}, M::Module, ex::Expr, f::Function)
+function sub_val(ex::Expr, m::Module)
     if ex.head == :call
-        for arg in ex.args
-            find_applicable!(L, M, arg, f)
-        end
+        ex.args = map(x->sub_val(x, m), ex.args)
     end
-    L
+    try
+        eval(m, ex)
+    catch MethodError e
+        return ex
+    end
+end
+
+function extract_signals!(ex, m::Module, dict::Dict{Any, Symbol})
+    if applicable(signal, ex)
+       if haskey(dict, ex)
+           return dict[ex]
+       else
+           sym = gensym()
+           dict[ex] = sym
+           return sym
+       end
+    else
+        return ex
+    end
+end
+
+function extract_signals!(ex::Symbol, m::Module, dict::Dict{Any, Symbol})
+    try
+        return eval(m, ex)
+    catch
+        return ex
+    end
+end
+
+function extract_signals!(ex::Expr, m::Module, dict::Dict{Any, Symbol})
+    if ex.head == :call
+        ex.args = map(x->extract_signals!(x, m, dict), ex.args)
+    end
+    ex
+end
+
+function extract_signals(ex, m::Module)
+    dict = Dict{Any, Symbol}()
+    ex = extract_signals!(ex, m, dict)
+    return ex, dict
 end
 
 macro lift(ex)
-    S = find_applicable(ex, signal)
-    Expr(:call, :lift, 
-         Expr(:->, Expr(:tuple, S...), ex),
-    esc(S...))
+    ex = sub_val(ex, current_module())
+    ex, sigs = extract_signals(ex, current_module())
+    args = Symbol[]
+    vals = Any[]
+    for (k, v) in sigs
+        push!(args, v)
+        push!(vals, k)
+    end
+    Expr(:call, :lift,
+         Expr(:->, Expr(:tuple, args...), ex),
+         vals)
 end
