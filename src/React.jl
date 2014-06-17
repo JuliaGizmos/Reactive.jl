@@ -3,7 +3,7 @@ module React
 using Base.Order
 using Base.Collections
 
-export Signal, Input, Node, signal, lift, map, foldl,
+export Signal, Input, Node, signal, lift, @lift, map, foldl,
        foldr, merge, filter, droprepeats, sampleon
 
 import Base: push!, foldl, foldr, merge, map,
@@ -11,6 +11,8 @@ import Base: push!, foldl, foldr, merge, map,
 
 # A signal is a value that can change over time.
 abstract Signal{T}
+
+include("macros.jl")
 
 # A topological order
 begin
