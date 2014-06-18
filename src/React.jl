@@ -233,6 +233,7 @@ begin
             prev = n
         end
         isupdating = false
+        return nothing
     end
 end
 
