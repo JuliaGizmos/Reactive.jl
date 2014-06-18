@@ -12,8 +12,6 @@ import Base: push!, foldl, foldr, merge, map,
 # A signal is a value that can change over time.
 abstract Signal{T}
 
-include("macros.jl")
-
 # A topological order
 begin
     local counter = uint(0)
@@ -280,5 +278,9 @@ function writemime{T}(io :: IO, m :: MIME"text/plain", node :: Signal{T})
     write(io, "[$(typeof(node))] ")
     writemime(io, m, node.value)
 end
+
+
+include("macros.jl")
+include("timing.jl")
 
 end # module
