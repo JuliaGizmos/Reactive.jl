@@ -258,14 +258,14 @@ dropwhen{T}(test :: Signal{Bool}, v0 :: T, s :: Signal{T}) =
     DropWhen{T}(test, v0, s :: Signal)
 dropwhen(test, v0, s) = dropwhen(signal(test), v0, signal(s))
 
-function foldl{T}(f::Function, v0::T, s::Signal)
+function foldl{T}(f::Function, v0::T, s::Signal...)
     local a = v0
-    lift(b -> (a = f(a, b)), T, s)
+    lift((b...) -> (a = f(a, b...)), T, s...)
 end
 
-function foldr{T}(f::Function, v0::T, s::Signal)
+function foldr{T}(f::Function, v0::T, s::Signal...)
     local a = v0
-    lift(b -> (a = f(b, a)), T, s)
+    lift((b...) -> (a = f(b..., a)), T, s...)
 end
 
 #############################################
