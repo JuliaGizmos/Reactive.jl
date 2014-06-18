@@ -91,3 +91,19 @@ map(x -> push!(k, x), seq)
 
 @test m.value == length(seq) + 1
 @test n.value == 7
+
+# dropwhen
+b = Input(true)
+n = Input(1)
+dw = dropwhen(b, 0, n)
+@test dw.value == 0
+push!(n, 2)
+@test dw.value == 0
+push!(b, false)
+@test dw.value == 0
+push!(n, 1)
+@test dw.value == 1
+push!(n, 2)
+@test dw.value == 2
+dw = dropwhen(b, 0, n)
+@test dw.value == 2

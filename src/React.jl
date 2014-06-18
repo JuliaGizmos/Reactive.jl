@@ -4,7 +4,7 @@ using Base.Order
 using Base.Collections
 
 export Signal, Input, Node, signal, lift, @lift, map, foldl,
-       foldr, merge, filter, droprepeats, sampleon
+       foldr, merge, filter, droprepeats, dropwhen, sampleon
 
 import Base: push!, foldl, foldr, merge, map,
        show, writemime, filter
@@ -90,6 +90,29 @@ function update{T}(node :: Filter{T}, parent :: Signal{T})
         return true
     else
         return false
+    end
+end
+
+type DropWhen{T} <: Node{T}
+    rank :: Uint
+    children :: Vector{Signal}
+    test :: Signal{Bool}
+    signal :: Signal{T}
+    value :: T
+    function DropWhen(test :: Signal{Bool}, default :: T, s :: Signal{T})
+        node = new(next_rank(), Signal[], test, s,
+                   test.value ? default : s.value)
+        add_child!(s, node)
+        return node
+    end
+end
+
+function update{T}(node :: DropWhen{T}, parent :: Signal{T})
+    if node.test.value
+        return false
+    else
+        node.value = parent.value
+        return true
     end
 end
 
@@ -229,8 +252,11 @@ sampleon(s1, s2) = sampleon(signal(s1), signal(s2))
 filter{T}(pred :: Function, v0 :: T, s :: Signal{T}) = Filter{T}(pred, v0, s)
 merge{T}(signals :: Signal{T}...) = Merge{T}(signals...)
 merge(signals) = merge(map(signal, signals)...)
-droprepeats{T}(s :: Signal{T}) = DropRepeats{T}(s :: Signal)
+droprepeats{T}(s :: Signal{T}) = DropRepeats{T}(s)
 droprepeats(s) = droprepeats(signal(s))
+dropwhen{T}(test :: Signal{Bool}, v0 :: T, s :: Signal{T}) =
+    DropWhen{T}(test, v0, s :: Signal)
+dropwhen(test, v0, s) = dropwhen(signal(test), v0, signal(s))
 
 function foldl{T}(f::Function, v0::T, s::Signal)
     local a = v0
