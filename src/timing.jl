@@ -2,6 +2,8 @@ module Timing
 
 using React
 
+export every, fpswhen, fps, timestamp
+
 function every(delta::Float64)
     i = Input(time())
     update(timer, status) = push!(i, time())

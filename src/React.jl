@@ -5,7 +5,7 @@ using Base.Collections
 
 export Signal, Input, Node, signal, lift, @lift, map, foldl,
        foldr, merge, filter, dropif, droprepeats, dropwhen,
-       sampleon, prev, keepwhen
+       sampleon, prev, keepwhen, Timing
 
 import Base: push!, foldl, foldr, merge, map,
        show, writemime, filter
