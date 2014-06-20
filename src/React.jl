@@ -4,7 +4,8 @@ using Base.Order
 using Base.Collections
 
 export Signal, Input, Node, signal, lift, @lift, map, foldl,
-       foldr, merge, filter, droprepeats, dropwhen, sampleon
+       foldr, merge, filter, dropif, droprepeats, dropwhen,
+       sampleon, prev, keepwhen
 
 import Base: push!, foldl, foldr, merge, map,
        show, writemime, filter
@@ -267,9 +268,6 @@ function foldr{T}(f::Function, v0::T, s::Signal...)
     lift((b...) -> (a = f(b..., a)), T, s...)
 end
 
-#############################################
-# Methods for displaying signals
-
 function show{T}(node :: Signal{T})
     show(node.value)
 end
@@ -282,5 +280,6 @@ end
 
 include("macros.jl")
 include("timing.jl")
+include("util.jl")
 
 end # module
