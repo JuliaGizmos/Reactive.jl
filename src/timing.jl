@@ -4,7 +4,12 @@ using React
 
 export every, fpswhen, fps, timestamp
 
-# Guarrantees interval
+# Create a signal of timestamps that updates every delta seconds
+#
+# Args:
+#     delta: interval between updates.
+# Returns:
+#     a periodically updating timestamp as a signal
 function every(delta::Float64)
     i = Input(time())
     update(timer, status) = push!(i, time())
@@ -13,7 +18,14 @@ function every(delta::Float64)
     return lift(x->x, Float64, i) # prevent push!
 end
 
-# Try to get to freq number of FPS.
+# Same as the fps function, but you can turn it on and off.
+# The first time delta after a pause is always zero, no matter how long the pause was.
+#
+# Args:
+#     test: a switch signal of booleans to turn fps on or off
+#     freq: the maximum frequency at which fpswhen should update
+# Returns:
+#     an signal of Float64 time deltas
 function fpswhen(test::Signal{Bool}, freq::Float64)
     diff = Input(0.0)
 
@@ -41,10 +53,24 @@ function fpswhen(test::Signal{Bool}, freq::Float64)
     return lift(gate, Float64, test, diff)
 end
 
+# Takes a desired number of frames per second and updates
+# as quickly as possible at most the desired number of times a second.
+#
+# Args:
+#     freq: the desired fps
+# Returns:
+#     a signal of time delta between two updates
 function fps(freq::Float64)
     return fpswhen(Input(true), freq)
 end
 
+# Timestamp a signal.
+#
+# Args:
+#     s: a signal to timestamp
+# Returns:
+#     a signal of type (Float64, T) where the first element is the time
+#     at which the value (2nd element) got updated.
 function timestamp{T}(s::Signal{T})
     return lift(x -> (time(), x), (Float64, T), s)
 end

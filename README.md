@@ -15,7 +15,7 @@ Pkg.add("React")
 ## Usage
 
 ### Signal type
-A value of type `Signal{T}` represents a time-varying value of type T. Signal is an abstract type. Functions `Input`, `lift`, `foldl`, `sampleon` and [others](#API) all create values that are a subtypes of Signal.
+A value of type `Signal{T}` represents a time-varying value of type T. Signal is an abstract type. Functions `Input`, `lift`, `foldl`, `sampleon` and [others](#api) all create values that are a subtypes of Signal.
 
 A simple line follower robot with 3 "line sensors" and 2 motors might be programmed like this:
 ```julia
@@ -79,7 +79,7 @@ while true
 end
 ```
 
-## State
+### State
 The following examples deal with a voting system in an election. The voters can either vote for Alice, Bob, or it might be invalid. `foldl` can be used to accumulate a value over time. You might count the number of votes like this:
 ```julia
 votes   = Input(:Invalid)
@@ -106,9 +106,9 @@ end
 diff = lift(x->x[1], foldl(difference, (0, time()), vote_times))
 ```
 
-## Filtering, merging and sampling
+### Filtering, merging and sampling
 
-The `filter` function can filter updates to a signal with a [redicate
+The `filter` function can filter updates to a signal with a predicate
 
 ```julia
 # Create a signal of only valid votes
@@ -116,7 +116,7 @@ The `filter` function can filter updates to a signal with a [redicate
 valid_votes = filter(x -> x != :Invalid, nothing, votes)
 ```
 
-You can merge two more signals of the same type:
+You can merge two or more signals of the same type with `merge`:
 
 ```julia
 # merge votes from all the polling booths

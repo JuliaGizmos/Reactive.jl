@@ -10,7 +10,7 @@ export Signal, Input, Node, signal, lift, @lift, map, foldl,
 import Base: push!, foldl, foldr, merge, map,
        show, writemime, filter
 
-# A signal is a value that can change over time.
+# A Signal{T} is a time-varying value of type T.
 abstract Signal{T}
 
 # A topological order
@@ -25,9 +25,8 @@ end
 
 signal(x :: Signal) = x
 
-# An input is a root node in the signal graph.
-# It must be created with a default value, and can be
-# updated with a call to `update`.
+# An input is a root node in the signal graph. It must be created
+# with a default value, and can be updated with a call to `push!`.
 type Input{T} <: Signal{T}
     rank :: Uint
     children :: Vector{Signal}
@@ -40,7 +39,8 @@ type Input{T} <: Signal{T}
 end
 Input{T}(val :: T) = Input{T}(val)
 
-abstract Node{T} <: Signal{T} # An intermediate node
+# An intermediate node
+abstract Node{T} <: Signal{T}
 
 function add_child!(parents :: (Signal...), child :: Signal)
     for p in parents
@@ -182,23 +182,31 @@ end
 
 begin
     local isupdating = false
-    function push!{T}(inp :: Input{T}, val :: T)
+    # Update the value of an Input signal and propagate the
+    # change.
+    #
+    # Args:
+    #     input: An Input signal
+    #     val: The new value to be set
+    # Returns:
+    #     nothing
+    function push!{T}(input :: Input{T}, val :: T)
         if isupdating
-            error("calling push! inside a lift is prohibited.")
+            error("push! must be called asynchronously")
         end
         isupdating = true
-        inp.value = val
+        input.value = val
 
         heap = (Signal, Signal)[] # a min-heap of (child, parent)
         ord = By(a -> a[1].rank)  # ordered topologically by child.rank
 
         # first dirty parent
         merge_parent = Dict{Merge, Signal}()
-        for c in inp.children
+        for c in input.children
             if isa(c, Merge)
-                merge_parent[c] = inp
+                merge_parent[c] = input
             end
-            heappush!(heap, (c, inp), ord)
+            heappush!(heap, (c, input), ord)
         end
 
         prev = nothing
@@ -238,6 +246,17 @@ end
 
 push!{T}(inp :: Input{T}, val) = push!(inp, convert(T, val))
 
+# The `lift` operator can be used to create a new signal from
+# existing signals. The value of the new signal will be the return
+# value of a function `f` applied to the current values of the input
+# signals.
+#
+# Args:
+#     f: The transformation function
+#     output_type: Output type (optional)
+#     inputs...: Signals to apply `f` to. Same number as the arity of `f`.
+# Returns:
+#     a signal which updates when an argument signal updates.
 lift(f :: Function, output_type :: Type, inputs :: Signal...) =
     Lift{output_type}(f, inputs...)
 
@@ -247,26 +266,77 @@ lift(f :: Function, output_type :: Type, inputs) =
 lift(f :: Function, inputs...) =
     lift(f, Any, inputs...)
 
-sampleon{T, U}(s1 :: Signal{T}, s2 :: Signal{U}) = SampleOn{T, U}(s1, s2)
-sampleon(s1, s2) = sampleon(signal(s1), signal(s2))
+# [Fold](http://en.wikipedia.org/wiki/Fold_(higher-order_function)) over time.
+# foldl can be used to reduce a signal updates to a signal of an accumulated value.
+#
+# Args:
+#     f: A function that takes its previously returned value as the first argument
+#        and the values of the signals as the second argument
+#     v0: initial value of the fold
+#     signals: as many signals as one less than the arity of f.
+# Returns:
+#     A signal which updates when one of the argument signals update.
+function foldl{T}(f::Function, v0::T, signals::Signal...)
+    local a = v0
+    lift((b...) -> (a = f(a, b...)), T, signals...)
+end
+
+function foldr{T}(f::Function, v0::T, signals::Signal...)
+    local a = v0
+    lift((b...) -> (a = f(b..., a)), T, signals...)
+end
+
+# Keep only updates that return true when applied to a predicate function.
+#
+# Args:
+#     pred: a function of type that returns a boolean value
+#     v0:   the value the signal should take if the predicate is not satisfied initially.
+#     s:    the signal to be filtered
+# Returns:
+#     A filtered signal
 filter{T}(pred :: Function, v0 :: T, s :: Signal{T}) = Filter{T}(pred, v0, s)
-merge{T}(signals :: Signal{T}...) = Merge{T}(signals...)
-merge(signals) = merge(map(signal, signals)...)
-droprepeats{T}(s :: Signal{T}) = DropRepeats{T}(s)
-droprepeats(s) = droprepeats(signal(s))
+filter(pred :: Function, v0, s) = filter(pred, v0, signal(s))
+
+# Drop updates when the first signal is true.
+#
+# Args:
+#     test: a Signal{Bool} which tells when to drop updates
+#     v0:   value to be used if the test signal is true initially
+#     s:    the signal to drop updates from
+# Return:
+#     a signal which updates only when the test signal is false
 dropwhen{T}(test :: Signal{Bool}, v0 :: T, s :: Signal{T}) =
     DropWhen{T}(test, v0, s :: Signal)
 dropwhen(test, v0, s) = dropwhen(signal(test), v0, signal(s))
 
-function foldl{T}(f::Function, v0::T, s::Signal...)
-    local a = v0
-    lift((b...) -> (a = f(a, b...)), T, s...)
-end
+# Sample from the second signal every time an update occurs in the first signal
+#
+# Args:
+#     s1: the signal to watch for updates
+#     s2: the signal to sample from when s1 updates
+# Returns:
+#     a of the same type as s2 which updates with s1
+sampleon{T, U}(s1 :: Signal{T}, s2 :: Signal{U}) = SampleOn{T, U}(s1, s2)
+sampleon(s1, s2) = sampleon(signal(s1), signal(s2))
 
-function foldr{T}(f::Function, v0::T, s::Signal...)
-    local a = v0
-    lift((b...) -> (a = f(b..., a)), T, s...)
-end
+# Merge multiple signals of the same type. If more than one signals
+# update together, the first one gets precedence.
+#
+# Args:
+#     signals...: two or more signals
+# Returns:
+#     a merged signal
+merge{T}(signals :: Signal{T}...) = Merge{T}(signals...)
+merge(signals) = merge(map(signal, signals)...)
+
+# Drop repeated updates. To be used on signals of immutable types.
+#
+# Args:
+#     s: the signal to drop repeats from
+# Returns:
+#     a signal with repeats dropped.
+droprepeats{T}(s :: Signal{T}) = DropRepeats{T}(s)
+droprepeats(s) = droprepeats(signal(s))
 
 function show{T}(node :: Signal{T})
     show(node.value)

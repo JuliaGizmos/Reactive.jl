@@ -24,7 +24,7 @@ function extract_signals!(ex, m::Module, dict::Dict{Any, Symbol})
            return dict[ex]
        else
            sym = gensym()
-           dict[ex] = sym
+           dict[signal(ex)] = sym
            return sym
        end
     else
@@ -34,7 +34,14 @@ end
 
 function extract_signals!(ex::Symbol, m::Module, dict::Dict{Any, Symbol})
     try
-        return eval(m, ex)
+        v = eval(m, ex)
+        if applicable(signal, v)
+            sym = gensym()
+            dict[signal(v)] = sym
+            return sym
+        else
+            return v
+        end
     catch
         return ex
     end
