@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="author" content="">
+  <meta charset="utf-8">
+  <title></title>
+  <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|PT+Sans|Source+Code+Pro'
+        rel='stylesheet' type='text/css'>
+  <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" media="all">
+  <link href="css/custom.css" rel="stylesheet" type="text/css" media="all">
+  <link href="css/hk-pyg.css" rel="stylesheet" type="text/css" media="all">
+  <script src="js/jquery-2.0.3.min.js" type="text/javascript"></script>
+  <script src="js/bootstrap.min.js" type="text/javascript"></script>
+</head>
+<body>
+  <div id="topbar" style="z-index: 3">
+    <div class="container">
+      <div class="row">
+        <ul>
+          <li><div id="pkgname">React 0.1.1+</div></li>
+          <li><a href="http://github.com/shashi/React.jl">Code</a></li>
+          <li><a href="http://github.com/shashi/React.jl/issues">Issues</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" style="z-index: auto">
+    <div class="row">
+      <div class="col-sm-7">
+      <div id="title-block">
+        <h1></h1>
+      </div id="body-content">
+
+<figure>
+<img src="Star-On-Machine.jpg" />
+</figure>
+<p>React.jl is a package for programming with data flows and the propagation of change. It makes event driven programming simple.</p>
+<p>React borrows its design from <a href="http://elm-lang.org/">Elm</a> (<a href="http://elm-lang.org/learn/What-is-FRP.elm">FRP</a>).</p>
+<h1 id="getting-started">Getting Started</h1>
+<p>To install the latest release of React, run the following in the Julia REPL.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">Pkg.add(<span class="st">&quot;React&quot;</span>)</code></pre>
+<p>To start using it, import it:</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">using React</code></pre>
+<h1 id="signals-and-the-lift-operator">Signals and the lift operator</h1>
+<p>The basic currency of React programs are signals. <code>Signal{T}</code> is an abstract type that represents a time-varying value of type <code>T</code>. You can create signals, combine, filter and merge them using the functions in this library. An <code>Input</code> is the most basic kind of signal: it has no parents and all updates to it are explicit (done through a call to <code>push!</code>). You can use the <code>Input</code> constructor to initialize an input signal with a default value.</p>
+<p>In the examples below we explore how a simple line follower robot could be programmed.</p>
+<p>Here are the specifications of the robot:</p>
+<ol type="1">
+<li>There are 3 sensors: left, middle and right</li>
+<li>There are 2 DC motors: left and right (the bot is balanced by a castor wheel)</li>
+</ol>
+<p>We need to take inputs from the sensors and drive the motors. We start off by creating a signal of sensor values.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># the values signify how much of the line each sensor (left, middle, right) is seeing</span>
+sensor_input = Input([<span class="fl">0.0</span>, <span class="fl">1.0</span>, <span class="fl">0.0</span>])     <span class="co"># :: Input{Vector{Float64}}</span></code></pre>
+<p>The <code>lift</code> operator takes a function <code>f</code> of arity <code>n</code>, optionally an output type and <code>n</code> signals, and creates a new signal. The new signal updates when one of the <code>n</code> argument signals update. Its value is <code>f</code> applied to the values of the input signals.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># v_left function takes as the current sensor readings</span>
+<span class="co"># and returns the voltage to be applied across the left DC motor</span>
+<span class="kw">function</span> v_left(sensors)
+   <span class="co"># slow down when left sensor is seeing a lot of the line</span>
+   <span class="co"># -ve voltage turns the wheel backwards</span>
+   <span class="co"># this could, of course, be [more complicated than this](http://www.societyofrobots.com/member_tutorials/book/export/html/350).</span>
+   sensors[<span class="fl">2</span>] - sensors[<span class="fl">1</span>]
+<span class="kw">end</span>
+
+<span class="co"># similarly, v_right converts sensor readings into the voltage</span>
+<span class="co"># applied across right motor</span>
+<span class="kw">function</span> v_right(sensors)
+   sensors[<span class="fl">2</span>] - sensors[<span class="fl">3</span>]
+<span class="kw">end</span>
+
+<span class="co"># lift operator can be used to transform the sensor input into</span>
+<span class="co"># a signal of voltages.</span>
+left_motor  = lift(v_left,  <span class="dt">Float64</span>, sensor_input)
+right_motor = lift(v_right, <span class="dt">Float64</span>, sensor_input)</code></pre>
+<p>The <code>@lift</code> macro makes this simpler:</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">left_motor  = @lift sensor_input[<span class="fl">1</span>] - sensor_input[<span class="fl">3</span>]
+right_motor = @lift sensor_input[<span class="fl">1</span>] - sensor_input[<span class="fl">2</span>]</code></pre>
+<p>We can now create a signal that updates the voltage across the motors when the voltage signals change.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">function</span> set_voltages(left, right)
+    write(LEFT_MOTOR_OUTPUT,  left)
+    write(RIGHT_MOTOR_OUTPUT, right)
+<span class="kw">end</span>
+
+@lift set_voltages(left_motor, right_motor)</code></pre>
+<h1 id="an-event-loop">An Event Loop</h1>
+<p>Finally, we need to set up an event loop which reads input from the sensors and plumbs it into the data flow we created above.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">function</span> read_sensors()
+    [read(LEFT_SENSOR_PIN),
+     read(MIDDLE_SENSOR_PIN),
+     read(RIGHT_SENSOR_PIN)]
+
+<span class="kw">while</span> true
+    <span class="co"># push! changes the value held by an input signal and</span>
+    <span class="co"># propagates it through the data flow</span>
+    @async push!(sensor_input, read_sensors())
+    sleep(<span class="fl">0.1</span>)
+<span class="kw">end</span></code></pre>
+<h1 id="maintaining-state">Maintaining State</h1>
+<p>The following examples deal with a voting system in an election. The voters can either vote for Alice, Bob, or it might be invalid.</p>
+<p><code>foldl</code> can be used to accumulate a value over time. You might count the number of votes like this:</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">votes   = Input(:Invalid)
+total   = foldl((acc, vote) -&gt; acc + <span class="fl">1</span>, <span class="fl">0</span>, votes)
+alice   = foldl((acc, vote) -&gt; acc + (vote == :Alice), <span class="fl">0</span>, votes)
+bob     = foldl((acc, vote) -&gt; acc + (vote == :Bob),   <span class="fl">0</span>, votes)
+leading = lift((a, b) -&gt; <span class="kw">if</span> a &gt; b ? :Alice : a &lt; b ? :Bob : :Tie, alice, bob)</code></pre>
+<p>Maintaining a difference or an average value is a bit more involved. You will have to use foldl to save previous state. To find the difference between previous and current value of a signal, you'd do:</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">function</span> difference(prev, x)
+    prev_diff, prev_val = prev
+    <span class="kw">return</span> (x-prev_val, x)
+<span class="kw">end</span>
+
+diff = lift(x-&gt;x[<span class="fl">1</span>], foldl(difference, <span class="fl">0.0</span>, signal))</code></pre>
+<p>This is a common pattern that arises while writing reactive programs. Note that this method has the advantage that all state is explicit. You could accomplish this by using a global variable to store <code>prev_val</code>, but that is not recommended.</p>
+<h1 id="filtering-merging">Filtering, merging</h1>
+<p>The <code>filter</code> or <code>dropif</code> functions can filter a signal based on a predicate function.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># Create a signal of only valid votes</span>
+<span class="co"># If the initial votes are invalid, then we return nothing</span>
+valid_votes = filter(x -&gt; x != :Invalid, nothing, votes)
+
+<span class="co"># Or</span>
+valid_votes = dropif(x -&gt; x == :Invalid, nothing, votes)</code></pre>
+<p><code>keepwhen</code> and <code>dropwhen</code> functions can be used to filter a signal based on another boolean signal.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">keepwhen(poll_open, votes)
+
+<span class="co"># Or</span>
+dropwhen(poll_closed, votes)</code></pre>
+<p>You can merge two or more signals of the same type with <code>merge</code>:</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># merge votes from all polls</span>
+votes = merge(poll1, poll2, poll3)</code></pre>
+<h1 id="timed-signals-and-sampling">Timed signals and sampling</h1>
+<p><code>React.Timing</code> module contains some functinos to create timed signals. <code>every</code> can be used to create a signal that updates at a certain interval.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
+
+every10secs = every(<span class="fl">10.0</span>)</code></pre>
+<p><code>every10secs</code> is a signal of timestamps (Float64) which updates every 10 seconds.</p>
+<p><code>sampleon</code> function takes two signals and samples the second signal when the first one changes.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
+
+<span class="co"># Update to the leading candidate every 10 seconds</span>
+periodic_leading = sampleon(every10secs, leading)</code></pre>
+<p>While <code>every</code> guarrantees the interval, <code>fps</code> tries to update at a certain maximum rate.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
+
+fps10 = fps(<span class="fl">10.0</span>)</code></pre>
+<p>We can use <code>fps</code> to simplify the signal loop in our robot example above:</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">
+sensor_input = lift(read_sensors, fps(<span class="fl">10.0</span>))</code></pre>
+<p><code>fpswhen</code> takes a boolean signal as the first argument and stops the timer when this signal becomes false.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># assume circuit completes if none of the sensors can see the line</span>
+circuit_not_complete = lift(s -&gt; sum(s) != <span class="fl">0.0</span>, sensor_inputs)
+sensor_input = lift(read_sensors, fpswhen(circuit_not_complete, <span class="fl">10.0</span>))</code></pre>
+<p>this stops reading the input (and hence moving the bot) when the circuit is complete.</p>
+<p><code>timestamp</code> function can be used to timestamp any signal.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
+timestamped_votes = timestamp(votes)</code></pre>
+<p><code>timestamped_votes</code> is a signal of <code>(timestamp, vote)</code> where <code>timestamp</code> is a <code>Float64</code> timestamp denoting when the <code>vote</code> came in.</p>
+<h1 id="possible-uses-of-react">Possible uses of React</h1>
+<p>We have seen very simplistic applications above. React is general enough to help you build many other apps driven by events. Some use cases off the top of my head:</p>
+<ul>
+<li>Interactive user interfaces (see <a href="https://github.com/shashi/Interact.jl">Interact.jl</a>)</li>
+<li>Animations</li>
+<li>Robotics and automation</li>
+<li>Queueing systems and service oriented apps</li>
+</ul>
+<h1 id="reporting-bugs">Reporting Bugs</h1>
+<p>Let me know about any bugs, counterintuitive behavior, or enhancements you'd like by <a href="https://github.com/shashi/React.jl/issues/new">filing a bug</a> on github.</p>
+        <hr>
+      </div>
+
+      <div class="col-sm-offset-8" style="z-index: 2">
+        <div id="table-of-contents">
+          <div id="table-of-contents-content">
+            <ul>
+            <li><div class="toc-current-doc">
+                 <a href="#topbar">Introduction</a>
+               </div>
+            
+            <ul>
+            <li><a href="#getting-started">Getting Started</a/></li>
+            <li><a href="#signals-and-the-lift-operator">Signals and the lift operator</a/></li>
+            <li><a href="#an-event-loop">An Event Loop</a/></li>
+            <li><a href="#maintaining-state">Maintaining State</a/></li>
+            <li><a href="#filtering,-merging">Filtering, merging</a/></li>
+            <li><a href="#timed-signals-and-sampling">Timed signals and sampling</a/></li>
+            <li><a href="#possible-uses-of-react">Possible uses of React</a/></li>
+            <li><a href="#reporting-bugs">Reporting Bugs</a/></li>
+            </ul>
+            </li><li><a href="api.html">API</a></li></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <footer class="col-sm-8">
+    <p class="muted">Last modified by  on . Generated with
+    <a href="https://github.com/dcjones/Judo.jl">Judo</a>.</p>
+  </footer>
+
+  </div>
+</body>
+</html>
+

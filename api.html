@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="author" content="">
+  <meta charset="utf-8">
+  <title></title>
+  <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|PT+Sans|Source+Code+Pro'
+        rel='stylesheet' type='text/css'>
+  <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" media="all">
+  <link href="css/custom.css" rel="stylesheet" type="text/css" media="all">
+  <link href="css/hk-pyg.css" rel="stylesheet" type="text/css" media="all">
+  <script src="js/jquery-2.0.3.min.js" type="text/javascript"></script>
+  <script src="js/bootstrap.min.js" type="text/javascript"></script>
+</head>
+<body>
+  <div id="topbar" style="z-index: 3">
+    <div class="container">
+      <div class="row">
+        <ul>
+          <li><div id="pkgname">React 0.1.1+</div></li>
+          <li><a href="http://github.com/shashi/React.jl">Code</a></li>
+          <li><a href="http://github.com/shashi/React.jl/issues">Issues</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" style="z-index: auto">
+    <div class="row">
+      <div class="col-sm-7">
+      <div id="title-block">
+        <h1></h1>
+      </div id="body-content">
+
+<h1 id="signals">Signals</h1>
+<h2 id="signalt">Signal{T}</h2>
+<div class="api-doc">
+A <code>Signal{T}</code> is a time-varying value of type T.
+</div>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">abstract</span> Signal{T}</code></pre>
+<h2 id="inputt">Input{T}</h2>
+<div class="api-doc">
+An <code>Input</code> is a signal which can be updated explicitly by code external to React. All other signal types have implicit update logic. <code>Input</code> signals can be updated by a call to <code>push!</code>. An <code>Input</code> must be created with an initial value.
+</div>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">type</span> Input{T} &lt;: Signal{T} ... <span class="kw">end</span>
+i = Input(<span class="fl">0</span>)    <span class="co"># Construct an input signal of integers with the default value 0</span></code></pre>
+<h2 id="nodet">Node{T}</h2>
+<div class="api-doc">
+An intermediate node. A <code>Node</code> can be created by functions in this library that return signals.
+</div>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">abstract</span> Node{T} &lt;: Signal{T}</code></pre>
+<h1 id="transforming-signals">Transforming signals</h1>
+<h2 id="lift">lift</h2>
+<div class="api-doc">
+<p>The <code>lift</code> operator can be used to create a new signal from existing signals. The value of the new signal will be the return value of a function <code>f</code> applied to the current values of the input signals.</p>
+<h4>Args</h4>
+<ul>
+<li><code>f</code>: The transformation function</li>
+<li><code>output_type</code>: Output type (optional)</li>
+<li><code>inputs...</code>: Signals to apply <code>f</code> to. Same number as the arity of <code>f</code>.</li>
+</ul>
+<h4>Returns</h4>
+a signal which updates when an argument signal updates.
+</div>
+<h1 id="state">State</h1>
+<h2 id="foldl">foldl</h2>
+<div class="api-doc">
+<p><a href="http://en.wikipedia.org/wiki/Fold_(higher-order_function)">Fold</a> over time. foldl can be used to reduce a signal updates to a signal of an accumulated value.</p>
+<h4>Args</h4>
+<ul>
+<li><p><code>f</code>: A function that takes its previously returned value as the first argument and the values of the signals as the second argument</p></li>
+<li><code>v0</code>: initial value of the fold</li>
+<li><p><code>signals</code>: as many signals as one less than the arity of f.</p></li>
+</ul>
+<h4>Returns</h4>
+A signal which updates when one of the argument signals update.
+</div>
+<h2 id="foldr">foldr</h2>
+<h1 id="filters-and-gates">Filters and Gates</h1>
+<h2 id="filter">filter</h2>
+<div class="api-doc">
+<p>Keep only updates that return true when applied to a predicate function.</p>
+<h4>Args</h4>
+<ul>
+<li><code>pred</code>: a function of type that returns a boolean value</li>
+<li><code>v0</code>: the value the signal should take if the predicate is not satisfied initially.</li>
+<li><code>s</code>: the signal to be filtered</li>
+</ul>
+<h4>Returns</h4>
+A filtered signal
+</div>
+<h2 id="dropif">dropif</h2>
+<div class="api-doc">
+<p>Drop updates if the predicate is true. Complement of filter.</p>
+<h4>Args</h4>
+<ul>
+<li><code>pred</code>: a predicate function</li>
+<li><code>v0</code>: base value to be used if the predicate is satisfied initially</li>
+<li><code>s</code>: the signal to drop updates on</li>
+</ul>
+<h4>Returns</h4>
+a filtered signal
+</div>
+<h2 id="droprepeats">droprepeats</h2>
+<div class="api-doc">
+<p>Drop repeated updates. To be used on signals of immutable types.</p>
+<h4>Args</h4>
+<ul>
+<li><code>s</code>: the signal to drop repeats from</li>
+</ul>
+<h4>Returns</h4>
+a signal with repeats dropped.
+</div>
+<h2 id="keepwhen">keepwhen</h2>
+<div class="api-doc">
+<p>Keep only updates to the second signal only when the first signal is true. Complements dropwhen.</p>
+<h4>Args</h4>
+<ul>
+<li><code>test</code>: a Signal{Bool} which tells when to keep updates to s</li>
+<li><code>v0</code>: base value to use if the signal is false initially</li>
+<li><code>s</code>: the signal to filter</li>
+</ul>
+<h4>Returns</h4>
+a signal which updates only when the test signal is true
+</div>
+<h2 id="dropwhen">dropwhen</h2>
+<div class="api-doc">
+<p>Drop updates when the first signal is true.</p>
+<h4>Args</h4>
+<ul>
+<li><code>test</code>: a Signal{Bool} which tells when to drop updates</li>
+<li><code>v0</code>: value to be used if the test signal is true initially</li>
+<li><code>s</code>: the signal to drop updates from</li>
+</ul>
+</div>
+<h1 id="sample-and-merge">Sample and Merge</h1>
+<h2 id="sampleon">sampleon</h2>
+<div class="api-doc">
+<p>Sample from the second signal every time an update occurs in the first signal</p>
+<h4>Args</h4>
+<ul>
+<li><code>s1</code>: the signal to watch for updates</li>
+<li><code>s2</code>: the signal to sample from when s1 updates</li>
+</ul>
+<h4>Returns</h4>
+a of the same type as s2 which updates with s1
+</div>
+<h2 id="merge">merge</h2>
+<div class="api-doc">
+<p>Merge multiple signals of the same type. If more than one signals update together, the first one gets precedence.</p>
+<h4>Args</h4>
+<ul>
+<li><code>signals...</code>: two or more signals</li>
+</ul>
+<h4>Returns</h4>
+a merged signal
+</div>
+<h1 id="timing">Timing</h1>
+<p>Timing functions are available in the React.Timing module:</p>
+<pre class="sourceCode julia julia"><code class="sourceCode julia">using React.Timing</code></pre>
+<h2 id="fps">fps</h2>
+<div class="api-doc">
+<p>Takes a desired number of frames per second and updates as quickly as possible at most the desired number of times a second.</p>
+<h4>Args</h4>
+<ul>
+<li><code>freq</code>: the desired fps</li>
+</ul>
+<h4>Returns</h4>
+a signal of time delta between two updates
+</div>
+<h2 id="fpswhen">fpswhen</h2>
+<div class="api-doc">
+<p>Same as the fps function, but you can turn it on and off. The first time delta after a pause is always zero, no matter how long the pause was.</p>
+<h4>Args</h4>
+<ul>
+<li><code>test</code>: a switch signal of booleans to turn fps on or off</li>
+<li><code>freq</code>: the maximum frequency at which fpswhen should update</li>
+</ul>
+<h4>Returns</h4>
+an signal of Float64 time deltas
+</div>
+<h2 id="every">every</h2>
+<div class="api-doc">
+<p>Create a signal of timestamps that updates every delta seconds</p>
+<h4>Args</h4>
+<ul>
+<li><code>delta</code>: interval between updates.</li>
+</ul>
+<h4>Returns</h4>
+a periodically updating timestamp as a signal
+</div>
+<h2 id="timestamp">timestamp</h2>
+<div class="api-doc">
+<p>Timestamp a signal.</p>
+<h4>Args</h4>
+<ul>
+<li><code>s</code>: a signal to timestamp</li>
+</ul>
+<h4>Returns</h4>
+a signal of type (Float64, T) where the first element is the time at which the value (2nd element) got updated.
+</div>
+        <hr>
+      </div>
+
+      <div class="col-sm-offset-8" style="z-index: 2">
+        <div id="table-of-contents">
+          <div id="table-of-contents-content">
+            <ul>
+            <li><a href="index.html">Introduction</a></li><li><div class="toc-current-doc">
+                 <a href="#topbar">API</a>
+               </div>
+            
+            <ul>
+            <li><a href="#signals">Signals</a/></li>
+            <ul>
+            <li><a href="#signal{t}">Signal{T}</a/></li>
+            <li><a href="#input{t}">Input{T}</a/></li>
+            <li><a href="#node{t}">Node{T}</a/></li>
+            </ul>
+            <li><a href="#transforming-signals">Transforming signals</a/></li>
+            <ul>
+            <li><a href="#lift">lift</a/></li>
+            </ul>
+            <li><a href="#state">State</a/></li>
+            <ul>
+            <li><a href="#foldl">foldl</a/></li>
+            <li><a href="#foldr">foldr</a/></li>
+            </ul>
+            <li><a href="#filters-and-gates">Filters and Gates</a/></li>
+            <ul>
+            <li><a href="#filter">filter</a/></li>
+            <li><a href="#dropif">dropif</a/></li>
+            <li><a href="#droprepeats">droprepeats</a/></li>
+            <li><a href="#keepwhen">keepwhen</a/></li>
+            <li><a href="#dropwhen">dropwhen</a/></li>
+            </ul>
+            <li><a href="#sample-and-merge">Sample and Merge</a/></li>
+            <ul>
+            <li><a href="#sampleon">sampleon</a/></li>
+            <li><a href="#merge">merge</a/></li>
+            </ul>
+            <li><a href="#timing">Timing</a/></li>
+            <ul>
+            <li><a href="#fps">fps</a/></li>
+            <li><a href="#fpswhen">fpswhen</a/></li>
+            <li><a href="#every">every</a/></li>
+            <li><a href="#timestamp">timestamp</a/></li>
+            </ul>
+            </ul>
+            </li></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <footer class="col-sm-8">
+    <p class="muted">Last modified by  on . Generated with
+    <a href="https://github.com/dcjones/Judo.jl">Judo</a>.</p>
+  </footer>
+
+  </div>
+</body>
+</html>
+
