@@ -6,9 +6,9 @@ order: 1
 
 ![](Star-On-Machine.jpg)
 
-React.jl is a package for programming with data flows and the propagation of change. It makes event driven programming simple.
+React.jl is a package for programming with data flows and the propagation of change. It makes event-driven programming simple.
 
-React borrows its design from [Elm](http://elm-lang.org/) ([FRP](http://elm-lang.org/learn/What-is-FRP.elm)).
+React borrows its design from [Elm](http://elm-lang.org/) ([Functional Reactive Programming](http://elm-lang.org/learn/What-is-FRP.elm)).
 
 # Getting Started
 
@@ -23,7 +23,9 @@ using React
 ```
 # Signals and the lift operator
 
-The basic currency of React programs are signals. `Signal{T}` is an abstract type that represents a time-varying value of type `T`. You can create signals, combine, filter and merge them using the functions in this library. An `Input` is the most basic kind of signal: it has no parents and all updates to it are explicit (done through a call to `push!`). You can use the `Input` constructor to initialize an input signal with a default value.
+The basic currency of React programs are signals. `Signal{T}` is an abstract type that represents a time-varying value of type `T`. You can create signals, combine, filter and merge them using the functions in this library.
+
+An `Input` is the most basic kind of signal: it has no parents and all updates to it are explicit (done through a call to `push!`).
 
 In the examples below we explore how a simple line follower robot could be programmed.
 
@@ -32,7 +34,7 @@ Here are the specifications of the robot:
 1. There are 3 sensors: left, middle and right
 2. There are 2 DC motors: left and right (the bot is balanced by a castor wheel)
 
-We need to take inputs from the sensors and drive the motors. We start off by creating a signal of sensor values.
+We need to take inputs from the sensors and drive the motors. We start off by creating a signal of sensor values. You can use the `Input` constructor to initialize an input signal with a default value.
 ```{.julia execute="false"}
 # the values signify how much of the line each sensor (left, middle, right) is seeing
 sensor_input = Input([0.0, 1.0, 0.0])     # :: Input{Vector{Float64}}
@@ -56,8 +58,7 @@ function v_right(sensors)
    sensors[2] - sensors[3]
 end
 
-# lift operator can be used to transform the sensor input into
-# a signal of voltages.
+#  transform the sensor input into a signal of voltages.
 left_motor  = lift(v_left,  Float64, sensor_input)
 right_motor = lift(v_right, Float64, sensor_input)
 ```
@@ -88,6 +89,7 @@ function read_sensors()
 	[read(LEFT_SENSOR_PIN),
      read(MIDDLE_SENSOR_PIN),
      read(RIGHT_SENSOR_PIN)]
+end
 
 while true
     # push! changes the value held by an input signal and
@@ -97,29 +99,31 @@ while true
 end
 ```
 
+See [Timed signals and sampling](#timed-signals-and-sampling) for a more elegant way of doing the same!
 # Maintaining State
-The following examples deal with a voting system in an election. The voters can either vote for Alice, Bob, or it might be invalid.
+The following examples deal with a voting system in an election. The voters can either vote for Alice, Bob, or cast an invalid vote.
 
 `foldl` can be used to accumulate a value over time. You might count the number of votes like this:
 ```{.julia execute="false"}
-votes   = Input(:Invalid)
-total   = foldl((acc, vote) -> acc + 1, 0, votes)
+votes   = Input(:NoVote)    # We use :NoVote to denote the initial case
+total   = foldl((acc, vote) -> acc + (vote != :NoVote), 0, votes) # Count all votes
 alice   = foldl((acc, vote) -> acc + (vote == :Alice), 0, votes)
 bob     = foldl((acc, vote) -> acc + (vote == :Bob),   0, votes)
 leading = lift((a, b) -> if a > b ? :Alice : a < b ? :Bob : :Tie, alice, bob)
 ```
 
-Maintaining a difference or an average value is a bit more involved. You will have to use foldl to save previous state. To find the difference between previous and current value of a signal, you'd do:
+Maintaining a difference is a bit more involved. To find the difference between previous and current value of a signal, you'd do:
 ```{.julia execute="false"}
 function difference(prev, x)
-    prev_diff, prev_val = prev
+	prev_diff, prev_val = prev
+    # x becomes prev_val in the next call
     return (x-prev_val, x)
 end
 
 diff = lift(x->x[1], foldl(difference, 0.0, signal))
 ```
 
-This is a common pattern that arises while writing reactive programs. Note that this method has the advantage that all state is explicit. You could accomplish this by using a global variable to store `prev_val`, but that is not recommended.
+This is a common pattern that arises while writing programs with React. Note that this method has the advantage that all state is explicit. You could accomplish this by using a global variable to store `prev_val`, but that is not recommended.
 
 # Filtering, merging
 
@@ -128,10 +132,10 @@ The `filter` or `dropif` functions can filter a signal based on a predicate func
 ```{.julia execute="false"}
 # Create a signal of only valid votes
 # If the initial votes are invalid, then we return nothing
-valid_votes = filter(x -> x != :Invalid, nothing, votes)
+valid_votes = filter(x -> x != :Invalid, :NoVote, votes)
 
 # Or
-valid_votes = dropif(x -> x == :Invalid, nothing, votes)
+valid_votes = dropif(x -> x == :Invalid, :NoVote, votes)
 ```
 
 `keepwhen` and `dropwhen` functions can be used to filter a signal based on another boolean signal.
@@ -150,9 +154,15 @@ You can merge two or more signals of the same type with `merge`:
 votes = merge(poll1, poll2, poll3)
 ```
 
+You can drop repeated updates to a signal with `droprepeats`:
+
+```{.julia execute="false"}
+leading_norepeat = droprepeats(leading)   # Only changes when the leading candidate changes.
+```
+
 # Timed signals and sampling
 
-`React.Timing` module contains some functinos to create timed signals.
+`React.Timing` module contains some functions to create timed signals.
 `every` can be used to create a signal that updates at a certain interval.
 
 ```{.julia execute="false"}
@@ -183,8 +193,9 @@ fps10 = fps(10.0)
 We can use `fps` to simplify the signal loop in our robot example above:
 
 ```{.julia execute="false"}
-
-sensor_input = lift(read_sensors, fps(10.0))
+# fps returns the time delta between the past two frames
+# This could be useful in animations or plotting. We ignore it here.
+sensor_input = lift((delta) -> read_sensors(), fps(10.0))
 ```
 
 `fpswhen` takes a boolean signal as the first argument and stops the timer when this signal becomes false.
@@ -206,9 +217,9 @@ timestamped_votes = timestamp(votes)
 `timestamped_votes` is a signal of `(timestamp, vote)` where `timestamp` is a `Float64` timestamp denoting when the `vote` came in.
 
 # Possible uses of React
-We have seen very simplistic applications above. React is general enough to help you build many other apps driven by events. Some use cases off the top of my head:
+We have seen very simplistic examples above. React is general enough to help you build many other apps driven by events. Some use cases off the top of my head:
 
-* Interactive user interfaces (see [Interact.jl](https://github.com/shashi/Interact.jl))
+* Interactive user interfaces (watch out for [Interact.jl](https://github.com/shashi/Interact.jl))
 * Animations
 * Robotics and automation
 * Queueing systems and service oriented apps
