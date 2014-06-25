@@ -12,7 +12,7 @@ export every, fpswhen, fps, timestamp
 #     a periodically updating timestamp as a signal
 function every(delta::Float64)
     i = Input(time())
-    update(timer, status) = push!(i, time())
+    update(timer) = push!(i, time())
     t = Timer(update)
     start_timer(t, delta, delta)
     return lift(x->x, Float64, i) # prevent push!
@@ -32,7 +32,7 @@ function fpswhen(test::Signal{Bool}, freq::Float64)
     local delta = 1/freq, t0 = time(),
           isOn = test.value, wasOn = false
 
-    function update(timer, status)
+    function update(timer)
         t = time()
         push!(diff, t-t0)
         t0 = t
