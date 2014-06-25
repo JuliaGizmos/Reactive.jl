@@ -100,7 +100,9 @@ end
 ```
 
 See [Timed signals and sampling](#timed-signals-and-sampling) for a more elegant way of doing the same!
+
 # Maintaining State
+
 The following examples deal with a voting system in an election. The voters can either vote for Alice, Bob, or cast an invalid vote.
 
 `foldl` can be used to accumulate a value over time. You might count the number of votes like this:
