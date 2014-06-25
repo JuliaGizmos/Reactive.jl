@@ -17,7 +17,7 @@
     <div class="container">
       <div class="row">
         <ul>
-          <li><div id="pkgname">React 0.2.0</div></li>
+          <li><div id="pkgname">React 0.2.0+</div></li>
           <li><a href="http://github.com/shashi/React.jl">Code</a></li>
           <li><a href="http://github.com/shashi/React.jl/issues">Issues</a></li>
         </ul>
@@ -97,7 +97,9 @@ right_motor = @lift sensor_input[<span class="fl">1</span>] - sensor_input[<span
     @async push!(sensor_input, read_sensors())
     sleep(<span class="fl">0.1</span>)
 <span class="kw">end</span></code></pre>
-<p>See <a href="#timed-signals-and-sampling">Timed signals and sampling</a> for a more elegant way of doing the same! # Maintaining State The following examples deal with a voting system in an election. The voters can either vote for Alice, Bob, or cast an invalid vote.</p>
+<p>See <a href="#timed-signals-and-sampling">Timed signals and sampling</a> for a more elegant way of doing the same!</p>
+<h1 id="maintaining-state">Maintaining State</h1>
+<p>The following examples deal with a voting system in an election. The voters can either vote for Alice, Bob, or cast an invalid vote.</p>
 <p><code>foldl</code> can be used to accumulate a value over time. You might count the number of votes like this:</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">votes   = Input(:NoVote)    <span class="co"># We use :NoVote to denote the initial case</span>
 total   = foldl((acc, vote) -&gt; acc + (vote != :NoVote), <span class="fl">0</span>, votes) <span class="co"># Count all votes</span>
@@ -184,6 +186,7 @@ timestamped_votes = timestamp(votes)</code></pre>
             <li><a href="#getting-started">Getting Started</a/></li>
             <li><a href="#signals-and-the-lift-operator">Signals and the lift operator</a/></li>
             <li><a href="#an-event-loop">An Event Loop</a/></li>
+            <li><a href="#maintaining-state">Maintaining State</a/></li>
             <li><a href="#filtering,-merging">Filtering, merging</a/></li>
             <li><a href="#timed-signals-and-sampling">Timed signals and sampling</a/></li>
             <li><a href="#possible-uses-of-react">Possible uses of React</a/></li>
