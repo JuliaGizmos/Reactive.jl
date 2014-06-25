@@ -10,7 +10,7 @@ export Signal, Input, Node, signal, lift, @lift, map, foldl,
 import Base: push!, foldl, foldr, merge, map,
        show, writemime, filter
 
-# A Signal{T} is a time-varying value of type T.
+# A `Signal{T}` is a time-varying value of type T.
 abstract Signal{T}
 
 # A topological order
@@ -25,8 +25,10 @@ end
 
 signal(x :: Signal) = x
 
-# An input is a root node in the signal graph. It must be created
-# with a default value, and can be updated with a call to `push!`.
+# An `Input` is a signal which can be updated explicitly by code external to React.
+# All other signal types have implicit update logic.
+# `Input` signals can be updated by a call to `push!`.
+# An `Input` must be created with an initial value.
 type Input{T} <: Signal{T}
     rank :: Uint
     children :: Vector{Signal}
@@ -39,7 +41,8 @@ type Input{T} <: Signal{T}
 end
 Input{T}(val :: T) = Input{T}(val)
 
-# An intermediate node
+# An intermediate node. A `Node` can be created by functions
+# in this library that return signals.
 abstract Node{T} <: Signal{T}
 
 function add_child!(parents :: (Signal...), child :: Signal)

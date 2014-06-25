@@ -15,9 +15,7 @@ end
 #     s:    the signal to drop updates on
 # Returns:
 #     a filtered signal
-function dropif{T}(pred::Function, v0::T, s::Signal{T})
-    filter(x->!pred(x), v0, s)
-end
+dropif{T}(pred::Function, v0::T, s::Signal{T}) = filter(x->!pred(x), v0, s)
 
 # Keep only updates to the second signal only when the first signal is true.
 # Complements dropwhen.
