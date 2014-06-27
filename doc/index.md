@@ -45,8 +45,9 @@ x.value
 ## Do you even lift?
 
 The `lift` operator can be used to transform one signal into another.
+
 ```{.julia execute="false"}
-xsquared = lift(a -> a*a, Int, xsquared)
+xsquared = lift(a -> a*a, Int, x)
 typeof(xsquared)
 # => Lift{Int64}
 super(Lift{Int64})
@@ -62,7 +63,7 @@ push!(x, 3)
 xsquared.value
 # => 9
 ```
-`lift` can take more than one signals as argument.
+`lift` can take more than one signalas argument.
 ```{.julia execute="false"}
 y = lift((a, b) -> a + b, Int, x, xsquared)
 y.value
@@ -206,7 +207,7 @@ Finally,
 lift(show_on_TV, alice, bob, stats)
 ```
 
-# Timed signals and sampling
+## Timed signals and sampling
 
 The [`React.Timing`](api.html#timing) module contains some functions to create timed signals.
 [`every`](api.html#every) can be used to create a signal that updates at a certain interval.
@@ -263,12 +264,12 @@ timestamped_votes = timestamp(votes)
 `timestamped_votes` is a signal of `(timestamp, vote)` where `timestamp` is a `Float64` timestamp denoting when the `vote` came in.
 
 # Possible uses of React
-React is general enough to help you build many other apps driven by events. Some use cases off the top of my head:
+I am currently using React to build interactive widgets on [IJulia](http://github.com/JuliaLang/IJulia.jl)
 
 * Interactive user interfaces (watch out for [Interact.jl](https://github.com/shashi/Interact.jl))
 * Animations
 * Robotics and automation
-* Queueing systems and service oriented apps
+* Queueing systems and service-oriented apps
 
 # Reporting Bugs
 
