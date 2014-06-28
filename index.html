@@ -44,6 +44,16 @@
 <pre class="sourceCode julia julia"><code class="sourceCode julia">using React</code></pre>
 <h1 id="a-tutorial-introduction">A Tutorial Introduction</h1>
 <h2 id="signals">Signals</h2>
+<!-- the dot language mapping of signal types:
+        input: 'hexagon'
+        lift: 'invtrapezium'
+        foldp: 'rect'
+        sampleOn: 'house'
+        constant: 'none'
+        dropRepeats: 'doubleoctagon';
+        merge: 'invtriangle';
+        default: 'ellipse';
+-->
 <p>The basic currency of React programs is the signal. <code>Signal{T}</code> is an abstract type that represents a time-varying value of type <code>T</code>. You can create, mix and mash <code>Signal</code>s using React.</p>
 <p>An <code>Input</code> is the most basic kind of signal: it has no <em>parents</em>--all updates to it are explicitly done through a call to <code>push!</code>.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
@@ -59,7 +69,7 @@ x.value
 <span class="co"># =&gt; 2</span></code></pre>
 <h2 id="do-you-even-lift">Do you even lift?</h2>
 <p>The <code>lift</code> operator can be used to transform one signal into another.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">xsquared = lift(a -&gt; a*a, <span class="dt">Int</span>, xsquared)
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">xsquared = lift(a -&gt; a*a, <span class="dt">Int</span>, x)
 typeof(xsquared)
 <span class="co"># =&gt; Lift{Int64}</span>
 super(Lift{<span class="dt">Int64</span>})
@@ -71,7 +81,7 @@ xsquared.value
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">push!(x, <span class="fl">3</span>)
 xsquared.value
 <span class="co"># =&gt; 9</span></code></pre>
-<p><code>lift</code> can take more than one signals as argument.</p>
+<p><code>lift</code> can take more than one signalas argument.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">y = lift((a, b) -&gt; a + b, <span class="dt">Int</span>, x, xsquared)
 y.value
 <span class="co"># =&gt; 12</span></code></pre>
@@ -164,7 +174,7 @@ secure_votes = dropwhen(security_breached, votes)</code></pre>
 <p><code>leading_norepeat</code> only updates when the leading candidate changes.</p>
 <p>Finally,</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">lift(show_on_TV, alice, bob, stats)</code></pre>
-<h1 id="timed-signals-and-sampling">Timed signals and sampling</h1>
+<h2 id="timed-signals-and-sampling">Timed signals and sampling</h2>
 <p>The <a href="api.html#timing"><code>React.Timing</code></a> module contains some functions to create timed signals. <a href="api.html#every"><code>every</code></a> can be used to create a signal that updates at a certain interval.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
 
@@ -193,12 +203,12 @@ sensor_input = lift(read_sensors, fpswhen(circuit_not_complete, <span class="fl"
 timestamped_votes = timestamp(votes)</code></pre>
 <p><code>timestamped_votes</code> is a signal of <code>(timestamp, vote)</code> where <code>timestamp</code> is a <code>Float64</code> timestamp denoting when the <code>vote</code> came in.</p>
 <h1 id="possible-uses-of-react">Possible uses of React</h1>
-<p>React is general enough to help you build many other apps driven by events. Some use cases off the top of my head:</p>
+<p>I am currently using React to build interactive widgets on <a href="http://github.com/JuliaLang/IJulia.jl">IJulia</a></p>
 <ul>
 <li>Interactive user interfaces (watch out for <a href="https://github.com/shashi/Interact.jl">Interact.jl</a>)</li>
 <li>Animations</li>
 <li>Robotics and automation</li>
-<li>Queueing systems and service oriented apps</li>
+<li>Queueing systems and service-oriented apps</li>
 </ul>
 <h1 id="reporting-bugs">Reporting Bugs</h1>
 <p>Let me know about any bugs, counterintuitive behavior, or enhancements you'd like by <a href="https://github.com/shashi/React.jl/issues/new">filing a bug</a> on github.</p>
@@ -214,18 +224,18 @@ timestamped_votes = timestamp(votes)</code></pre>
                </div>
             
             <ul>
-            <li><a href="#getting-started">Getting Started</a/></li>
-            <li><a href="#a-tutorial-introduction">A Tutorial Introduction</a/></li>
+            <li><a href="#getting started">Getting Started</a/></li>
+            <li><a href="#a tutorial introduction">A Tutorial Introduction</a/></li>
             <ul>
             <li><a href="#signals">Signals</a/></li>
-            <li><a href="#do-you-even-lift?">Do you even lift?</a/></li>
-            <li><a href="#the-event-loop">The Event Loop</a/></li>
-            <li><a href="#maintaining-state">Maintaining State</a/></li>
-            <li><a href="#filter-and-merge">Filter and merge</a/></li>
+            <li><a href="#do you even lift?">Do you even lift?</a/></li>
+            <li><a href="#the event loop">The Event Loop</a/></li>
+            <li><a href="#maintaining state">Maintaining State</a/></li>
+            <li><a href="#filter and merge">Filter and merge</a/></li>
+            <li><a href="#timed signals and sampling">Timed signals and sampling</a/></li>
             </ul>
-            <li><a href="#timed-signals-and-sampling">Timed signals and sampling</a/></li>
-            <li><a href="#possible-uses-of-react">Possible uses of React</a/></li>
-            <li><a href="#reporting-bugs">Reporting Bugs</a/></li>
+            <li><a href="#possible uses of react">Possible uses of React</a/></li>
+            <li><a href="#reporting bugs">Reporting Bugs</a/></li>
             </ul>
             </li><li><a href="api.html">API</a></li></ul>
           </div>
