@@ -25,6 +25,16 @@ using React
 
 ## Signals
 
+<!-- the dot language mapping of signal types:
+		input: 'hexagon'
+		lift: 'invtrapezium'
+		foldp: 'rect'
+		sampleOn: 'house'
+		constant: 'none'
+		dropRepeats: 'doubleoctagon';
+		merge: 'invtriangle';
+		default: 'ellipse';
+-->
 The basic currency of React programs is the signal. `Signal{T}` is an abstract type that represents a time-varying value of type `T`. You can create, mix and mash `Signal`s using React.
 
 An `Input` is the most basic kind of signal: it has no *parents*--all updates to it are explicitly done through a call to `push!`.
@@ -55,6 +65,7 @@ super(Lift{Int64})
 xsquared.value
 # => 4
 ```
+
 The type of the lifted signal can be given as the second argument to `lift`. It is assumed to be Any if omitted.
 
 Now for every value `x` takes, `xsquared` will hold its square.
@@ -63,7 +74,7 @@ push!(x, 3)
 xsquared.value
 # => 9
 ```
-`lift` can take more than one signalas argument.
+`lift` can take more than one signal as argument.
 ```{.julia execute="false"}
 y = lift((a, b) -> a + b, Int, x, xsquared)
 y.value
@@ -237,7 +248,7 @@ While `every` guarrantees the interval, [`fps`](api.html#fps) tries to update at
 fps10 = fps(10.0)
 ```
 
-We can use `fps` to simplify the [event loop](#the-event-loop) xin our robot example above:
+We can use `fps` to simplify the [event loop](#the-event-loop) in our robot example above:
 
 ```{.julia execute="false"}
 # fps returns the time delta between the past two frames
@@ -263,8 +274,8 @@ timestamped_votes = timestamp(votes)
 ```
 `timestamped_votes` is a signal of `(timestamp, vote)` where `timestamp` is a `Float64` timestamp denoting when the `vote` came in.
 
-# Possible uses of React
-I am currently using React to build interactive widgets on [IJulia](http://github.com/JuliaLang/IJulia.jl)
+# Possible uses
+I am currently using React to build interactive widgets on [IJulia](http://github.com/JuliaLang/IJulia.jl). React is aimed at making event-driven programming simple. You could use React to build:
 
 * Interactive user interfaces (watch out for [Interact.jl](https://github.com/shashi/Interact.jl))
 * Animations
