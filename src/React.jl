@@ -10,6 +10,8 @@ export Signal, Input, Node, signal, lift, @lift, map, foldl,
 import Base: push!, foldl, foldr, merge, map,
        show, writemime, filter
 
+typealias Callable Union(Type, Function)
+
 # A `Signal{T}` is a time-varying value of type T.
 abstract Signal{T}
 
@@ -55,10 +57,10 @@ add_child!(parent :: Signal, child :: Signal) = push!(parent.children, child)
 type Lift{T} <: Node{T}
     rank :: Uint
     children :: Vector{Signal}
-    f :: Function
+    f :: Callable
     signals :: (Signal...)
     value :: T
-    function Lift(f :: Function, signals :: Signal...)
+    function Lift(f :: Callable, signals :: Signal...)
         node = new(next_rank(), Signal[], f, signals,
                    convert(T, f([s.value for s in signals]...)))
         add_child!(signals, node)
@@ -260,13 +262,13 @@ push!{T}(inp :: Input{T}, val) = push!(inp, convert(T, val))
 #     inputs...: Signals to apply `f` to. Same number as the arity of `f`.
 # Returns:
 #     a signal which updates when an argument signal updates.
-lift(f :: Function, output_type :: Type, inputs :: Signal...) =
+lift(f :: Callable, output_type :: Type, inputs :: Signal...) =
     Lift{output_type}(f, inputs...)
 
-lift(f :: Function, output_type :: Type, inputs) =
+lift(f :: Callable, output_type :: Type, inputs) =
     Lift{output_type}(f, map(signal, inputs)...)
 
-lift(f :: Function, inputs...) =
+lift(f :: Callable, inputs...) =
     lift(f, Any, inputs...)
 
 # [Fold](http://en.wikipedia.org/wiki/Fold_(higher-order_function)) over time.
