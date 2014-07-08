@@ -75,4 +75,37 @@ function timestamp{T}(s::Signal{T})
     return lift(x -> (time(), x), (Float64, T), s)
 end
 
+# Collect signal updates into lists of updates within a given time
+# period.
+#
+# Args:
+#    signal: a signal Signal{T}
+#    t: the time window
+# Returns:
+#    A throttled signal of Signal{Vector[T]}
+## type ThrottleNode{T} <: Node{Vector{T}}
+##     rank::UInt
+##     children::Vecto{Signal}
+##     signal::Signal{T}
+##     window::Float64
+##     value::Vector{T}
+
+##     function ThrottleNode(s::Signal{T}, t::Float64)
+##         node = new(React.next_rank(), Signal[], s, window, [s.value])
+##         React.add_child!(s, node)
+##     end
+## end
+## function update{T}(s::ThrottleNode{T}, parent::Signal{T})
+## end
+
+## function throttle{T}(s::Signal{T}, t::Float64)
+##     i = Input([s.value])
+##     if noBin exists
+##         createANewBin which will update the signal in t seconds.
+##     else
+##         add to bin
+##     end
+##     return i
+## end
+
 end # module

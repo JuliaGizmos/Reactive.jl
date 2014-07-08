@@ -23,8 +23,8 @@ end
 
 function extract_signals!(ex, m::Module, dict::Dict{Any, Symbol})
     if applicable(signal, ex)
-       if haskey(dict, ex)
-           return dict[ex]
+       if haskey(dict, signal(ex))
+           return dict[signal(ex)]
        else
            sym = gensym()
            dict[signal(ex)] = sym
@@ -39,6 +39,7 @@ function extract_signals!(ex::Symbol, m::Module, dict::Dict{Any, Symbol})
     try
         v = eval(m, ex)
         if applicable(signal, v)
+            println("SIGNAL")
             sym = gensym()
             dict[signal(v)] = sym
             return sym

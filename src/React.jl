@@ -25,42 +25,41 @@ begin
     end
 end
 
-signal(x :: Signal) = x
+signal(x::Signal) = x
 
 # An `Input` is a signal which can be updated explicitly by code external to React.
 # All other signal types have implicit update logic.
 # `Input` signals can be updated by a call to `push!`.
 # An `Input` must be created with an initial value.
 type Input{T} <: Signal{T}
-    rank :: Uint
-    children :: Vector{Signal}
-    value :: T
+    rank::Uint
+    children::Vector{Signal}
+    value::T
 
-    function Input(v :: T)
-        self = new(next_rank(), Signal[], v)
-        return self
+    function Input(v::T)
+        new(next_rank(), Signal[], v)
     end
 end
-Input{T}(val :: T) = Input{T}(val)
+Input{T}(val::T) = Input{T}(val)
 
 # An intermediate node. A `Node` can be created by functions
 # in this library that return signals.
 abstract Node{T} <: Signal{T}
 
-function add_child!(parents :: (Signal...), child :: Signal)
+function add_child!(parents::(Signal...), child::Signal)
     for p in parents
         push!(p.children, child)
     end
 end
-add_child!(parent :: Signal, child :: Signal) = push!(parent.children, child)
+add_child!(parent::Signal, child::Signal) = push!(parent.children, child)
 
 type Lift{T} <: Node{T}
-    rank :: Uint
-    children :: Vector{Signal}
-    f :: Callable
-    signals :: (Signal...)
-    value :: T
-    function Lift(f :: Callable, signals :: Signal...)
+    rank::Uint
+    children::Vector{Signal}
+    f::Callable
+    signals::(Signal...)
+    value::T
+    function Lift(f::Callable, signals::Signal...)
         node = new(next_rank(), Signal[], f, signals,
                    convert(T, f([s.value for s in signals]...)))
         add_child!(signals, node)
@@ -68,18 +67,18 @@ type Lift{T} <: Node{T}
     end
 end
 
-function update{T, U}(node :: Lift{T}, parent :: Signal{U})
+function update{T, U}(node::Lift{T}, parent::Signal{U})
     node.value = convert(T, node.f([s.value for s in node.signals]...))
     return true
 end
 
 type Filter{T} <: Node{T}
-    rank :: Uint
-    children :: Vector{Signal}
-    predicate :: Function
-    signal :: Signal{T}
-    value :: T
-    function Filter(predicate :: Function, v0 :: T, s :: Signal{T})
+    rank::Uint
+    children::Vector{Signal}
+    predicate::Function
+    signal::Signal{T}
+    value::T
+    function Filter(predicate::Function, v0::T, s::Signal{T})
         node = new(next_rank(), Signal[], predicate, s,
                    predicate(s.value) ?
                    s.value : v0)
@@ -88,7 +87,7 @@ type Filter{T} <: Node{T}
     end
 end
 
-function update{T}(node :: Filter{T}, parent :: Signal{T})
+function update{T}(node::Filter{T}, parent::Signal{T})
     if node.predicate(node.signal.value)
         node.value = node.signal.value
         return true
@@ -98,12 +97,12 @@ function update{T}(node :: Filter{T}, parent :: Signal{T})
 end
 
 type DropWhen{T} <: Node{T}
-    rank :: Uint
-    children :: Vector{Signal}
-    test :: Signal{Bool}
-    signal :: Signal{T}
-    value :: T
-    function DropWhen(test :: Signal{Bool}, default :: T, s :: Signal{T})
+    rank::Uint
+    children::Vector{Signal}
+    test::Signal{Bool}
+    signal::Signal{T}
+    value::T
+    function DropWhen(test::Signal{Bool}, default::T, s::Signal{T})
         node = new(next_rank(), Signal[], test, s,
                    test.value ? default : s.value)
         add_child!(s, node)
@@ -111,7 +110,7 @@ type DropWhen{T} <: Node{T}
     end
 end
 
-function update{T}(node :: DropWhen{T}, parent :: Signal{T})
+function update{T}(node::DropWhen{T}, parent::Signal{T})
     if node.test.value
         return false
     else
@@ -121,18 +120,18 @@ function update{T}(node :: DropWhen{T}, parent :: Signal{T})
 end
 
 type DropRepeats{T} <: Node{T}
-    rank :: Uint
-    children :: Vector{Signal}
-    signal :: Signal{T}
-    value :: T
-    function DropRepeats(s :: Signal{T})
+    rank::Uint
+    children::Vector{Signal}
+    signal::Signal{T}
+    value::T
+    function DropRepeats(s::Signal{T})
         node = new(next_rank(), Signal[], s, s.value)
         add_child!(s, node)
         return node
     end
 end
 
-function update{T}(node :: DropRepeats{T}, parent :: Signal{T})
+function update{T}(node::DropRepeats{T}, parent::Signal{T})
     if node.value != parent.value
         node.value = parent.value
         return true
@@ -142,12 +141,12 @@ function update{T}(node :: DropRepeats{T}, parent :: Signal{T})
 end
 
 type Merge{T} <: Node{T}
-    rank :: Uint
-    children :: Vector{Signal}
-    signals :: (Signal{T}...)
-    ranks :: Dict{Signal, Int}
-    value :: T
-    function Merge(signals :: Signal...)
+    rank::Uint
+    children::Vector{Signal}
+    signals::(Signal{T}...)
+    ranks::Dict{Signal, Int}
+    value::T
+    function Merge(signals::Signal...)
         if length(signals) < 1
             error("Merge requires at least one as argument.")
         end
@@ -162,17 +161,17 @@ type Merge{T} <: Node{T}
     end
 end
 
-function update{T}(node :: Merge{T}, parent :: Signal{T})
+function update{T}(node::Merge{T}, parent::Signal{T})
     node.value = parent.value
     return true
 end
 
 type SampleOn{T, U} <: Node{U}
-    rank :: Uint
-    children :: Vector{Signal}
-    signal1 :: Signal{T}
-    signal2 :: Signal{U}
-    value :: U
+    rank::Uint
+    children::Vector{Signal}
+    signal1::Signal{T}
+    signal2::Signal{U}
+    value::U
     function SampleOn(signal1, signal2)
         node = new(next_rank(), Signal[], signal1, signal2, signal2.value)
         add_child!(signal1, node)
@@ -180,7 +179,7 @@ type SampleOn{T, U} <: Node{U}
     end
 end
 
-function update{T, U}(node :: SampleOn{T, U}, parent :: Signal{T})
+function update{T, U}(node::SampleOn{T, U}, parent::Signal{T})
     node.value = node.signal2.value
     return true
 end
@@ -195,7 +194,7 @@ begin
     #     val: The new value to be set
     # Returns:
     #     nothing
-    function push!{T}(input :: Input{T}, val :: T)
+    function push!{T}(input::Input{T}, val::T)
         if isupdating
             error("push! must be called asynchronously")
         end
@@ -249,7 +248,7 @@ begin
     end
 end
 
-push!{T}(inp :: Input{T}, val) = push!(inp, convert(T, val))
+push!{T}(inp::Input{T}, val) = push!(inp, convert(T, val))
 
 # The `lift` operator can be used to create a new signal from
 # existing signals. The value of the new signal will be the return
@@ -262,13 +261,13 @@ push!{T}(inp :: Input{T}, val) = push!(inp, convert(T, val))
 #     inputs...: Signals to apply `f` to. Same number as the arity of `f`.
 # Returns:
 #     a signal which updates when an argument signal updates.
-lift(f :: Callable, output_type :: Type, inputs :: Signal...) =
+lift(f::Callable, output_type::Type, inputs::Signal...) =
     Lift{output_type}(f, inputs...)
 
-lift(f :: Callable, output_type :: Type, inputs) =
+lift(f::Callable, output_type::Type, inputs) =
     Lift{output_type}(f, map(signal, inputs)...)
 
-lift(f :: Callable, inputs...) =
+lift(f::Callable, inputs...) =
     lift(f, Any, inputs...)
 
 # [Fold](http://en.wikipedia.org/wiki/Fold_(higher-order_function)) over time.
@@ -299,8 +298,8 @@ end
 #     s:    the signal to be filtered
 # Returns:
 #     A filtered signal
-filter{T}(pred :: Function, v0 :: T, s :: Signal{T}) = Filter{T}(pred, v0, s)
-filter(pred :: Function, v0, s) = filter(pred, v0, signal(s))
+filter{T}(pred::Function, v0::T, s::Signal{T}) = Filter{T}(pred, v0, s)
+filter(pred::Function, v0, s) = filter(pred, v0, signal(s))
 
 # Drop updates when the first signal is true.
 #
@@ -310,8 +309,8 @@ filter(pred :: Function, v0, s) = filter(pred, v0, signal(s))
 #     s:    the signal to drop updates from
 # Return:
 #     a signal which updates only when the test signal is false
-dropwhen{T}(test :: Signal{Bool}, v0 :: T, s :: Signal{T}) =
-    DropWhen{T}(test, v0, s :: Signal)
+dropwhen{T}(test::Signal{Bool}, v0::T, s::Signal{T}) =
+    DropWhen{T}(test, v0, s::Signal)
 dropwhen(test, v0, s) = dropwhen(signal(test), v0, signal(s))
 
 # Sample from the second signal every time an update occurs in the first signal
@@ -321,7 +320,7 @@ dropwhen(test, v0, s) = dropwhen(signal(test), v0, signal(s))
 #     s2: the signal to sample from when s1 updates
 # Returns:
 #     a of the same type as s2 which updates with s1
-sampleon{T, U}(s1 :: Signal{T}, s2 :: Signal{U}) = SampleOn{T, U}(s1, s2)
+sampleon{T, U}(s1::Signal{T}, s2::Signal{U}) = SampleOn{T, U}(s1, s2)
 sampleon(s1, s2) = sampleon(signal(s1), signal(s2))
 
 # Merge multiple signals of the same type. If more than one signals
@@ -331,7 +330,7 @@ sampleon(s1, s2) = sampleon(signal(s1), signal(s2))
 #     signals...: two or more signals
 # Returns:
 #     a merged signal
-merge{T}(signals :: Signal{T}...) = Merge{T}(signals...)
+merge{T}(signals::Signal{T}...) = Merge{T}(signals...)
 merge(signals) = merge(map(signal, signals)...)
 
 # Drop repeated updates. To be used on signals of immutable types.
@@ -340,14 +339,14 @@ merge(signals) = merge(map(signal, signals)...)
 #     s: the signal to drop repeats from
 # Returns:
 #     a signal with repeats dropped.
-droprepeats{T}(s :: Signal{T}) = DropRepeats{T}(s)
+droprepeats{T}(s::Signal{T}) = DropRepeats{T}(s)
 droprepeats(s) = droprepeats(signal(s))
 
-function show{T}(node :: Signal{T})
+function show{T}(node::Signal{T})
     show(node.value)
 end
 
-function writemime{T}(io :: IO, m :: MIME"text/plain", node :: Signal{T})
+function writemime{T}(io::IO, m::MIME"text/plain", node::Signal{T})
     write(io, "[$(typeof(node))] ")
     writemime(io, m, node.value)
 end
