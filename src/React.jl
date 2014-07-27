@@ -342,8 +342,8 @@ merge(signals) = merge(map(signal, signals)...)
 droprepeats{T}(s::Signal{T}) = DropRepeats{T}(s)
 droprepeats(s) = droprepeats(signal(s))
 
-function show{T}(node::Signal{T})
-    show(node.value)
+function show{T}(io::IO, node::Signal{T})
+    show(io::IO, node.value)
 end
 
 function writemime{T}(io::IO, m::MIME"text/plain", node::Signal{T})
