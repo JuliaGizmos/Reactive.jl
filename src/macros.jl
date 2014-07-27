@@ -8,10 +8,9 @@ function sub_val(x, m::Module)
 end
 
 function sub_val(ex::Expr, m::Module)
-    if ex.head == :call
+    if in(ex.head, [:call, :row, :vcat, :tuple, :cell1d])
         ex.args = map(x->sub_val(x, m), ex.args)
-    end
-    if ex.head == :kw
+    elseif ex.head == :kw
         ex.args[2] = sub_val(ex.args[2], m)
     end
     try
@@ -39,7 +38,6 @@ function extract_signals!(ex::Symbol, m::Module, dict::Dict{Any, Symbol})
     try
         v = eval(m, ex)
         if applicable(signal, v)
-            println("SIGNAL")
             sym = gensym()
             dict[signal(v)] = sym
             return sym
@@ -52,7 +50,7 @@ function extract_signals!(ex::Symbol, m::Module, dict::Dict{Any, Symbol})
 end
 
 function extract_signals!(ex::Expr, m::Module, dict::Dict{Any, Symbol})
-    if ex.head == :call
+    if in(ex.head, [:call, :row, :vcat, :tuple, :cell1d])
         ex.args = map(x->extract_signals!(x, m, dict), ex.args)
     elseif ex.head == :kw
         ex.args[2] = extract_signals!(ex.args[2], m, dict)
