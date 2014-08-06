@@ -197,54 +197,60 @@ begin
     function push!{T}(input::Input{T}, val::T)
         if isupdating
             error("push! must be called asynchronously")
-        end
-        isupdating = true
-        input.value = val
+        else
+            try
+                isupdating = true
+                input.value = val
 
-        heap = (Signal, Signal)[] # a min-heap of (child, parent)
-        ord = By(a -> a[1].rank)  # ordered topologically by child.rank
+                heap = (Signal, Signal)[] # a min-heap of (child, parent)
+                ord = By(a -> a[1].rank)  # ordered topologically by child.rank
 
-        # first dirty parent
-        merge_parent = Dict{Merge, Signal}()
-        for c in input.children
-            if isa(c, Merge)
-                merge_parent[c] = input
-            end
-            heappush!(heap, (c, input), ord)
-        end
-
-        prev = nothing
-        while !isempty(heap)
-            (n, parent) = heappop!(heap, ord)
-            if n == prev
-                continue # already processed
-            end
-
-            # Merge is a special case!
-            if isa(n, Merge) && haskey(merge_parent, n)
-                propagate = update(n, merge_parent[n])
-            else
-                propagate = update(n, parent)
-            end
-
-            if propagate
-                for c in n.children
+                # first dirty parent
+                merge_parent = Dict{Merge, Signal}()
+                for c in input.children
                     if isa(c, Merge)
-                        if haskey(merge_parent, c)
-                            if c.ranks[n] < c.ranks[merge_parent[c]]
-                                merge_parent[c] = n
+                        merge_parent[c] = input
+                    end
+                    heappush!(heap, (c, input), ord)
+                end
+
+                prev = nothing
+                while !isempty(heap)
+                    (n, parent) = heappop!(heap, ord)
+                    if n == prev
+                        continue # already processed
+                    end
+                    # Merge is a special case!
+                    if isa(n, Merge) && haskey(merge_parent, n)
+                        propagate = update(n, merge_parent[n])
+                    else
+                        propagate = update(n, parent)
+                    end
+
+                    if propagate
+                        for c in n.children
+                            if isa(c, Merge)
+                                if haskey(merge_parent, c)
+                                    if c.ranks[n] < c.ranks[merge_parent[c]]
+                                        merge_parent[c] = n
+                                    end
+                                else
+                                    merge_parent[c] = n
+                                end
                             end
-                        else
-                            merge_parent[c] = n
+                            heappush!(heap, (c, n), ord)
                         end
                     end
-                    heappush!(heap, (c, n), ord)
+                    prev = n
                 end
+                isupdating = false
+                return nothing
+            catch e
+                # FIXME: Rethink this.
+                isupdating = false
+                throw(e)
             end
-            prev = n
         end
-        isupdating = false
-        return nothing
     end
 end
 
