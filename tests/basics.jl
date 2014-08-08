@@ -6,7 +6,10 @@ number() = int(rand()*1000)
 ## Basics
 
 a = Input(number())
-b = lift(x -> x*x, Int, a)
+b = lift(x -> x*x, a)
+
+# Lift type
+@test isa(b, React.Lift{Int})
 
 # type conversion
 push!(a, 1.0)

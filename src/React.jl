@@ -59,9 +59,9 @@ type Lift{T} <: Node{T}
     f::Callable
     signals::(Signal...)
     value::T
-    function Lift(f::Callable, signals::Signal...)
-        node = new(next_rank(), Signal[], f, signals,
-                   convert(T, f([s.value for s in signals]...)))
+    function Lift(f::Callable, signals::Signal...;
+                  init::T=convert(T, f([s.value for s in signals]...)))
+        node = new(next_rank(), Signal[], f, signals, init)
         add_child!(signals, node)
         return node
     end
@@ -267,14 +267,14 @@ push!{T}(inp::Input{T}, val) = push!(inp, convert(T, val))
 #     inputs...: Signals to apply `f` to. Same number as the arity of `f`.
 # Returns:
 #     a signal which updates when an argument signal updates.
-lift(f::Callable, output_type::Type, inputs::Signal...) =
-    Lift{output_type}(f, inputs...)
+lift(f::Callable, output_type::Type, inputs::Signal...; kwargs...) =
+    Lift{output_type}(f, inputs...; kwargs...)
 
-lift(f::Callable, output_type::Type, inputs) =
-    Lift{output_type}(f, map(signal, inputs)...)
+lift(f::Callable, output_type::Type, inputs...; kwargs...) =
+    Lift{output_type}(f, map(signal, inputs)...; kwargs...)
 
-lift(f::Callable, inputs...) =
-    lift(f, Any, inputs...)
+lift(f::Callable, inputs...; init=f([signal(i).value for i in inputs]...)) =
+    lift(f, typeof(init), inputs..., init=init)
 
 # [Fold](http://en.wikipedia.org/wiki/Fold_(higher-order_function)) over time.
 # foldl can be used to reduce a signal updates to a signal of an accumulated value.

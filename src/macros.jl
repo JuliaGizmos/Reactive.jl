@@ -73,5 +73,5 @@ macro lift(ex)
     end
     Expr(:call, :lift,
          Expr(:->, Expr(:tuple, args...), ex),
-         vals)
+         vals...)
 end
