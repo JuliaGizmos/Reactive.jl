@@ -71,7 +71,7 @@ macro lift(ex)
         push!(args, v)
         push!(vals, k)
     end
-    Expr(:call, :lift,
-         Expr(:->, Expr(:tuple, args...), ex),
-         vals...)
+    esc(Expr(:call, :lift,
+             Expr(:->, Expr(:tuple, args...), ex),
+             vals...))
 end
