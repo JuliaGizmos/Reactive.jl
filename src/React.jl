@@ -349,11 +349,10 @@ droprepeats{T}(s::Signal{T}) = DropRepeats{T}(s)
 droprepeats(s) = droprepeats(signal(s))
 
 function show{T}(io::IO, node::Signal{T})
-    show(io, string("[$(typeof(node))] ", node.value))
+    write(io, string("[$(typeof(node))] ", node.value))
 end
 
 function writemime{T}(io::IO, m::MIME"text/plain", node::Signal{T})
-    write(io, "[$(typeof(node))] ")
     writemime(io, m, node.value)
 end
 
