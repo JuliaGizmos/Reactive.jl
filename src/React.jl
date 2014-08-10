@@ -286,14 +286,14 @@ lift(f::Callable, inputs...; init=f([signal(i).value for i in inputs]...)) =
 #     signals: as many signals as one less than the arity of f.
 # Returns:
 #     A signal which updates when one of the argument signals update.
-function foldl{T}(f::Function, v0::T, signals::Signal...)
+function foldl{T}(f::Function, v0::T, signal::Signal, signals::Signal...)
     local a = v0
-    lift((b...) -> (a = f(a, b...)), T, signals...)
+    lift((b...) -> (a = f(a, b...)), T, signal, signals...)
 end
 
-function foldr{T}(f::Function, v0::T, signals::Signal...)
+function foldr{T}(f::Function, v0::T, signal::Signal, signals::Signal...)
     local a = v0
-    lift((b...) -> (a = f(b..., a)), T, signals...)
+    lift((b...) -> (a = f(b..., a)), T, signal, signals...)
 end
 
 # Keep only updates that return true when applied to a predicate function.
