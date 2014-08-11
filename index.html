@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="author" content="">
+  <meta name="author" content="Shashi Gowda">
   <meta charset="utf-8">
-  <title></title>
+  <title>Introduction</title>
   <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|PT+Sans|Source+Code+Pro'
         rel='stylesheet' type='text/css'>
   <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" media="all">
@@ -17,7 +17,7 @@
     <div class="container">
       <div class="row">
         <ul>
-          <li><div id="pkgname">React 0.1.2+</div></li>
+          <li><div id="pkgname">React 0.1.4+</div></li>
           <li><a href="http://github.com/shashi/React.jl">Code</a></li>
           <li><a href="http://github.com/shashi/React.jl/issues">Issues</a></li>
         </ul>
@@ -29,7 +29,7 @@
     <div class="row">
       <div class="col-sm-7">
       <div id="title-block">
-        <h1></h1>
+        <h1>Introduction</h1>
       </div id="body-content">
 
 <figure>
@@ -81,7 +81,7 @@ xsquared.value
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">push!(x, <span class="fl">3</span>)
 xsquared.value
 <span class="co"># =&gt; 9</span></code></pre>
-<p><code>lift</code> can take more than one signalas argument.</p>
+<p><code>lift</code> can take more than one signal as argument.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">y = lift((a, b) -&gt; a + b, <span class="dt">Int</span>, x, xsquared)
 y.value
 <span class="co"># =&gt; 12</span></code></pre>
@@ -189,7 +189,7 @@ periodic_leading = sampleon(every10secs, leading)</code></pre>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
 
 fps10 = fps(<span class="fl">10.0</span>)</code></pre>
-<p>We can use <code>fps</code> to simplify the <a href="#the-event-loop">event loop</a> xin our robot example above:</p>
+<p>We can use <code>fps</code> to simplify the <a href="#the-event-loop">event loop</a> in our robot example above:</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># fps returns the time delta between the past two frames</span>
 <span class="co"># This could be useful in animations or plotting. We ignore it here.</span>
 sensor_input = lift((delta) -&gt; read_sensors(), fps(<span class="fl">10.0</span>))</code></pre>
@@ -202,8 +202,8 @@ sensor_input = lift(read_sensors, fpswhen(circuit_not_complete, <span class="fl"
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
 timestamped_votes = timestamp(votes)</code></pre>
 <p><code>timestamped_votes</code> is a signal of <code>(timestamp, vote)</code> where <code>timestamp</code> is a <code>Float64</code> timestamp denoting when the <code>vote</code> came in.</p>
-<h1 id="possible-uses-of-react">Possible uses of React</h1>
-<p>I am currently using React to build interactive widgets on <a href="http://github.com/JuliaLang/IJulia.jl">IJulia</a></p>
+<h1 id="possible-uses">Possible uses</h1>
+<p>I am currently using React to build interactive widgets on <a href="http://github.com/JuliaLang/IJulia.jl">IJulia</a>. React is aimed at making event-driven programming simple. You could use React to build:</p>
 <ul>
 <li>Interactive user interfaces (watch out for <a href="https://github.com/shashi/Interact.jl">Interact.jl</a>)</li>
 <li>Animations</li>
@@ -218,33 +218,119 @@ timestamped_votes = timestamp(votes)</code></pre>
       <div class="col-sm-offset-8" style="z-index: 2">
         <div id="table-of-contents">
           <div id="table-of-contents-content">
-            <ul>
-            <li><div class="toc-current-doc">
-                 <a href="#topbar">Introduction</a>
-               </div>
-            
-            <ul>
-            <li><a href="#getting started">Getting Started</a/></li>
-            <li><a href="#a tutorial introduction">A Tutorial Introduction</a/></li>
-            <ul>
-            <li><a href="#signals">Signals</a/></li>
-            <li><a href="#do you even lift?">Do you even lift?</a/></li>
-            <li><a href="#the event loop">The Event Loop</a/></li>
-            <li><a href="#maintaining state">Maintaining State</a/></li>
-            <li><a href="#filter and merge">Filter and merge</a/></li>
-            <li><a href="#timed signals and sampling">Timed signals and sampling</a/></li>
+            <ul class="toc list"><li>
+                <div class="toc-item"><a href="api.html">API</a></div>
+            </li>
+            <li>
+                <div style="margin-left: 1em" class="toc-item"><a href="api.html#signals">Signals</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#signalt">Signal{T}</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#inputt">Input{T}</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#nodet">Node{T}</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 1em" class="toc-item"><a href="api.html#transforming-signals">Transforming signals</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#lift">lift</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 1em" class="toc-item"><a href="api.html#state">State</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#foldl">foldl</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#foldr">foldr</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 1em" class="toc-item"><a href="api.html#filters-and-gates">Filters and Gates</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#filter">filter</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#dropif">dropif</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#droprepeats">droprepeats</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#keepwhen">keepwhen</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#dropwhen">dropwhen</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 1em" class="toc-item"><a href="api.html#sample-and-merge">Sample and Merge</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#sampleon">sampleon</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#merge">merge</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 1em" class="toc-item"><a href="api.html#timing">Timing</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#fps">fps</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#fpswhen">fpswhen</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#every">every</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="api.html#timestamp">timestamp</div></a/>
+            </li>
+            <li>
+                <div class="toc-item toc-current-doc"><a href="index.html">Introduction</a></div>
+            </li>
+            <li>
+                <div style="margin-left: 1em" class="toc-item"><a href="index.html#getting-started">Getting Started</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 1em" class="toc-item"><a href="index.html#a-tutorial-introduction">A Tutorial Introduction</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="index.html#signals">Signals</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="index.html#do-you-even-lift">Do you even lift?</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="index.html#the-event-loop">The Event Loop</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="index.html#maintaining-state">Maintaining State</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="index.html#filter-and-merge">Filter and merge</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 2em" class="toc-item"><a href="index.html#timed-signals-and-sampling">Timed signals and sampling</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 1em" class="toc-item"><a href="index.html#possible-uses">Possible uses</div></a/>
+            </li>
+            <li>
+                <div style="margin-left: 1em" class="toc-item"><a href="index.html#reporting-bugs">Reporting Bugs</div></a/>
+            </li>
             </ul>
-            <li><a href="#possible uses of react">Possible uses of React</a/></li>
-            <li><a href="#reporting bugs">Reporting Bugs</a/></li>
-            </ul>
-            </li><li><a href="api.html">API</a></li></ul>
           </div>
         </div>
       </div>
     </div>
 
   <footer class="col-sm-8">
-    <p class="muted">Last modified by  on . Generated with
+    <p class="muted">Last modified by Shashi Gowda on . Generated with
     <a href="https://github.com/dcjones/Judo.jl">Judo</a>.</p>
   </footer>
 
