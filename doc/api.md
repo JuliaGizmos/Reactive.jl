@@ -32,6 +32,31 @@ abstract Node{T} <: Signal{T}
 ## lift
 {{{lift}}}
 
+### @lift
+{{{@lift}}}
+
+Example:
+```{.julia execute="false"}
+z = @lift x*y
+```
+Here when `x` and `y` are signals, the above expression is equivalent to:
+```{.julia execute="false"}
+z = lift((a,b) -> a*b, x, y)
+```
+If, say, only x is a signal, then it is equivalent to:
+
+```{.julia execute="false"}
+z = lift(a -> a*y, x)
+```
+
+You can also create signals of tuples or arrays:
+
+```{.julia execute="false"}
+# E.g.
+z = @lift (x, 2y, x*y)
+# z is now a Signal{Tuple}
+```
+
 # State
 
 ## foldl

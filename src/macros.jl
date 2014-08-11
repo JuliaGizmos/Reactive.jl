@@ -55,13 +55,13 @@ function extract_signals(ex, m::Module)
     return ex, dict
 end
 
-# Convenience macro for calling `lift`
-# Usage:
-#    @lift expr
-# expression is evaluated as much as possible and
-# signal values in the expression are replaced with
-# variables which will then get their values form the
-# signals through a call to [`lift`](#lift) function.
+# Convenience macro for calling `lift`. Evaluates an
+# expression looking for signal values, and returns a
+# signal whose values are that of the expression as the
+# signals in it change.
+#
+# Args:
+#    expr: Expression
 macro lift(ex)
     ex = sub_val(ex, current_module())
     ex, sigs = extract_signals(ex, current_module())
