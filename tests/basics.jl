@@ -92,8 +92,8 @@ n = count(l)
 seq = [1, 1, 1, 0, 1, 0, 1, 0, 0]
 map(x -> push!(k, x), seq)
 
-@test m.value == length(seq) + 1
-@test n.value == 7
+@test m.value == length(seq)
+@test n.value == 6
 
 # dropwhen
 b = Input(true)

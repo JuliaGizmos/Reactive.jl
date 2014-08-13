@@ -160,7 +160,7 @@ The following examples deal with a voting system in an election. The voters can 
 [`foldl`](api.html#foldl) can be used to accumulate a value over time. You might count the number of votes like this:
 ```{.julia execute="false"}
 votes   = Input(:NoVote)    # We use :NoVote to denote the initial case
-total   = foldl((acc, vote) -> acc + (vote != :NoVote), 0, votes) # Count all votes
+total   = foldl((acc, vote) -> acc + 1, 0, votes) # Count all votes
 alice   = foldl((acc, vote) -> acc + (vote == :Alice), 0, votes)
 bob     = foldl((acc, vote) -> acc + (vote == :Bob),   0, votes)
 leading = lift((a, b) -> if a > b ? :Alice : a < b ? :Bob : :Tie, alice, bob)

@@ -24,10 +24,10 @@ for i in 1:100
     push!(a, number())
     push!(b, number())
 
-    @test ca.value == i+1
-    @test cb.value == i+1
-    @test cc.value == 2i+1
-    @test cd.value == 2i+1
-    @test ce.value == i+1
-    @test cf.value == 2i+1
+    @test ca.value == i
+    @test cb.value == i
+    @test cc.value == 2i
+    @test cd.value == 2i
+    @test ce.value == i
+    @test cf.value == 2i
 end
