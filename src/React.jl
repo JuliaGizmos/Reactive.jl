@@ -282,14 +282,16 @@ lift(f::Callable, output_type::Type, inputs...; kwargs...) =
 lift(f::Callable, inputs...; init=f([signal(i).value for i in inputs]...)) =
     lift(f, typeof(init), inputs..., init=init)
 
-⟿(signals::(Any...), f::Callable) = lift(f, signals...)
-⟿(signal, f::Callable) = lift(f, signal)
-function ⟿(signals::Union(Any, (Any, Callable))...)
-    last = signals[end]
-    ss = [signals[1:end-1]..., last[1]]
-    f  = last[2]
-    (ss...) ⟿ f
-end
+
+# Uncomment in Julia >= 0.3 to enable cute infix operators.
+#     ⟿(signals::(Any...), f::Callable) = lift(f, signals...)
+#     ⟿(signal, f::Callable) = lift(f, signal)
+#     function ⟿(signals::Union(Any, (Any, Callable))...)
+#         last = signals[end]
+#         ss = [signals[1:end-1]..., last[1]]
+#         f  = last[2]
+#         (ss...) ⟿ f
+#     end
 
 # [Fold](http://en.wikipedia.org/wiki/Fold_(higher-order_function)) over time.
 # foldl can be used to reduce a signal updates to a signal of an accumulated value.
