@@ -7,8 +7,11 @@ export Signal, Input, Node, signal, lift, @lift, map, foldl,
        foldr, merge, filter, dropif, droprepeats, dropwhen,
        sampleon, prev, keepwhen, Timing
 
-import Base: push!, foldl, foldr, merge, map,
-       show, writemime, filter
+import Base: push!, merge, map, show, writemime, filter
+
+if VERSION >= v"0.3-"
+    import Base: foldl, foldr
+end
 
 typealias Callable Union(Type, Function)
 

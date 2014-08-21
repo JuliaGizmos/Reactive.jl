@@ -8,4 +8,5 @@ function crash(x)
 end
 
 b = lift(crash, a)
-@test_throws ErrorException push!(a, 1)
+# don't specify exception type, to remain compatible with 0.2
+@test_throws push!(a, 1)
