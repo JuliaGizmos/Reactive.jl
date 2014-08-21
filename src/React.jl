@@ -300,12 +300,18 @@ end
 #     A signal which updates when one of the argument signals update.
 function foldl{T}(f::Function, v0::T, signal::Signal, signals::Signal...)
     local a = v0
-    lift((b...) -> (a = f(a, b...)), T, signal, signals...; init=v0)
+    function inner(b...)
+        a = f(a, b...)
+    end
+    lift(inner, T, signal, signals...; init=v0)
 end
 
 function foldr{T}(f::Function, v0::T, signal::Signal, signals::Signal...)
     local a = v0
-    lift((b...) -> (a = f(b..., a)), T, signal, signals...; init=v0)
+    function inner(b...)
+        a = f(b..., a)
+    end
+    lift(inner, T, signal, signals...; init=v0)
 end
 
 # Keep only updates that return true when applied to a predicate function.
