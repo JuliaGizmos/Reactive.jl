@@ -1,5 +1,5 @@
 ---
-title: Introduction
+title: Introduction - React.jl
 author: Shashi Gowda
 order: 1
 ...

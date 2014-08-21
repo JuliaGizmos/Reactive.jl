@@ -3,9 +3,9 @@ module React
 using Base.Order
 using Base.Collections
 
-export Signal, Input, Node, signal, lift, @lift, map, foldl,
+export Signal, Input, Node, signal, value, lift, @lift, map, foldl,
        foldr, merge, filter, dropif, droprepeats, dropwhen,
-       sampleon, prev, keepwhen, Timing
+       sampleon, prev, keepwhen, Timing, ⟿
 
 import Base: push!, merge, map, show, writemime, filter
 
@@ -29,6 +29,8 @@ begin
 end
 
 signal(x::Signal) = x
+rank(x::Signal) = x.rank # topological rank
+value(x::Signal) = x.value # current value
 
 # An `Input` is a signal which can be updated explicitly by code external to React.
 # All other signal types have implicit update logic.
@@ -206,7 +208,8 @@ begin
                 input.value = val
 
                 heap = (Signal, Signal)[] # a min-heap of (child, parent)
-                ord = By(a -> a[1].rank)  # ordered topologically by child.rank
+                child_rank(x) = rank(x[1])
+                ord = By(child_rank)  # ordered topologically by child.rank
 
                 # first dirty parent
                 merge_parent = Dict{Merge, Signal}()
@@ -279,6 +282,15 @@ lift(f::Callable, output_type::Type, inputs...; kwargs...) =
 lift(f::Callable, inputs...; init=f([signal(i).value for i in inputs]...)) =
     lift(f, typeof(init), inputs..., init=init)
 
+⟿(signals::(Any...), f::Callable) = lift(f, signals...)
+⟿(signal, f::Callable) = lift(f, signal)
+function ⟿(signals::Union(Any, (Any, Callable))...)
+    last = signals[end]
+    ss = [signals[1:end-1]..., last[1]]
+    f  = last[2]
+    (ss...) ⟿ f
+end
+
 # [Fold](http://en.wikipedia.org/wiki/Fold_(higher-order_function)) over time.
 # foldl can be used to reduce a signal updates to a signal of an accumulated value.
 #
@@ -291,12 +303,18 @@ lift(f::Callable, inputs...; init=f([signal(i).value for i in inputs]...)) =
 #     A signal which updates when one of the argument signals update.
 function foldl{T}(f::Function, v0::T, signal::Signal, signals::Signal...)
     local a = v0
-    lift((b...) -> (a = f(a, b...)), T, signal, signals...; init=v0)
+    function inner(b...)
+        a = f(a, b...)
+    end
+    lift(inner, T, signal, signals...; init=v0)
 end
 
 function foldr{T}(f::Function, v0::T, signal::Signal, signals::Signal...)
     local a = v0
-    lift((b...) -> (a = f(b..., a)), T, signal, signals...; init=v0)
+    function inner(b...)
+        a = f(b..., a)
+    end
+    lift(inner, T, signal, signals...; init=v0)
 end
 
 # Keep only updates that return true when applied to a predicate function.
