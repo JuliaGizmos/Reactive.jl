@@ -14,7 +14,8 @@ b = lift(x -> x*x, a)
 # type conversion
 push!(a, 1.0)
 @test b.value == 1
-@test_throws InexactError push!(a, 1.1) # inexact error
+# don't specify exception type, to remain compatible with 0.2
+@test_throws push!(a, 1.1) # inexact error
 
 push!(a, number())
 @test b.value == a.value*a.value
