@@ -1,6 +1,6 @@
 # React
 
-[![Build Status](https://travis-ci.org/shashi/React.jl.png)](https://travis-ci.org/shashi/React.jl)
+[![Build Status](https://travis-ci.org/JuliaLang/React.jl.png)](https://travis-ci.org/shashi/React.jl)
 [![PkgEval](http://pkg.julialang.org/badges/React_0.3.svg)](http://pkg.julialang.org/?pkg=React&ver=0.3)
 
 React.jl is a package for reactive programming in Julia.
@@ -14,5 +14,5 @@ Pkg.add("React")
 using React
 ```
 
-* **[Tutorial and API documentation](http://shashi.github.io/React.jl)**
-* [**Issues**](https://github.com/shashi/React.jl/issues/new)
+* **[Tutorial and API documentation](http://julialang.github.io/React.jl)**
+* [**Issues**](https://github.com/JuliaLang/React.jl/issues/new)
