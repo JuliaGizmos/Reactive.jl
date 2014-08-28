@@ -1,4 +1,4 @@
-The React.jl package is licensed under the MIT "Expat" License:
+The Reactive.jl package is licensed under the MIT "Expat" License:
 
 > Copyright (c) 2014: Shashi Gowda.
 >
