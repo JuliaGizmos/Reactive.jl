@@ -5,7 +5,7 @@
 
 Reactive.jl is a package for reactive programming in Julia.
 
-Reactive borrows its design from [Elm](http://elm-lang.org/) (see [Functional Reactiveive Programming](http://elm-lang.org/learn/What-is-FRP.elm)).
+Reactive borrows its design from [Elm](http://elm-lang.org/) (see [Functional Reactive Programming](http://elm-lang.org/learn/What-is-FRP.elm)).
 
 ## Quickstart
 

@@ -6,9 +6,9 @@ order: 1
 
 ![](Star-On-Machine.jpg)
 
-Reactive.jl is a Julia package for [Reactiveive Programming](http://en.wikipedia.org/Reactiveive_Programming). It makes writing event-driven programs simple.
+Reactive.jl is a Julia package for [Reactive Programming](http://en.wikipedia.org/Reactive_Programming). It makes writing event-driven programs simple.
 
-Reactive borrows its design from [Elm](http://elm-lang.org/) (see also [Functional Reactiveive Programming](http://elm-lang.org/learn/What-is-FRP.elm)).
+Reactive borrows its design from [Elm](http://elm-lang.org/) (see also [Functional Reactive Programming](http://elm-lang.org/learn/What-is-FRP.elm)).
 
 # Getting Started
 
