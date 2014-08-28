@@ -1,6 +1,6 @@
 module Timing
 
-using React
+using Reactive
 
 export every, fpswhen, fps, timestamp
 
@@ -91,8 +91,8 @@ end
 ##     value::Vector{T}
 
 ##     function ThrottleNode(s::Signal{T}, t::Float64)
-##         node = new(React.next_rank(), Signal[], s, window, [s.value])
-##         React.add_child!(s, node)
+##         node = new(Reactive.next_rank(), Signal[], s, window, [s.value])
+##         Reactive.add_child!(s, node)
 ##     end
 ## end
 ## function update{T}(s::ThrottleNode{T}, parent::Signal{T})

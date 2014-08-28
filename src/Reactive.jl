@@ -1,4 +1,4 @@
-module React
+module Reactive
 
 using Base.Order
 using Base.Collections
@@ -32,7 +32,7 @@ signal(x::Signal) = x
 rank(x::Signal) = x.rank # topological rank
 value(x::Signal) = x.value # current value
 
-# An `Input` is a signal which can be updated explicitly by code external to React.
+# An `Input` is a signal which can be updated explicitly by code external to Reactive.
 # All other signal types have implicit update logic.
 # `Input` signals can be updated by a call to `push!`.
 # An `Input` must be created with an initial value.

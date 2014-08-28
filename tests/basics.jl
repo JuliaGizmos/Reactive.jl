@@ -1,5 +1,5 @@
 using Base.Test
-using React
+using Reactive
 
 number() = int(rand()*1000)
 
@@ -9,7 +9,7 @@ a = Input(number())
 b = lift(x -> x*x, a)
 
 # Lift type
-@test isa(b, React.Lift{Int})
+@test isa(b, Reactive.Lift{Int})
 
 # type conversion
 push!(a, 1.0)
