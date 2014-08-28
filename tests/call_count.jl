@@ -1,5 +1,5 @@
 using Base.Test
-using React
+using Reactive
 
 number() = int(rand()*100)
 

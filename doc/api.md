@@ -91,9 +91,9 @@ z = @lift (x, 2y, x*y)
 
 # Timing
 
-Timing functions are available in the React.Timing module:
+Timing functions are available in the Reactive.Timing module:
 ```julia
-using React.Timing
+using Reactive.Timing
 ```
 
 ## fps

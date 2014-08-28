@@ -1,25 +1,25 @@
 ---
-title: Introduction - React.jl
+title: Introduction - Reactive.jl
 author: Shashi Gowda
 order: 1
 ...
 
 ![](Star-On-Machine.jpg)
 
-React.jl is a Julia package for [Reactive Programming](http://en.wikipedia.org/Reactive_Programming). It makes writing event-driven programs simple.
+Reactive.jl is a Julia package for [Reactiveive Programming](http://en.wikipedia.org/Reactiveive_Programming). It makes writing event-driven programs simple.
 
-React borrows its design from [Elm](http://elm-lang.org/) (see also [Functional Reactive Programming](http://elm-lang.org/learn/What-is-FRP.elm)).
+Reactive borrows its design from [Elm](http://elm-lang.org/) (see also [Functional Reactiveive Programming](http://elm-lang.org/learn/What-is-FRP.elm)).
 
 # Getting Started
 
-To install the latest release of React, run the following in the Julia REPL.
+To install the latest release of Reactive, run the following in the Julia REPL.
 ```{.julia execute="false"}
-Pkg.add("React")
+Pkg.add("Reactive")
 ```
 
 To start using it, import it:
 ```julia
-using React
+using Reactive
 ```
 # A Tutorial Introduction
 
@@ -35,7 +35,7 @@ using React
 		merge: 'invtriangle';
 		default: 'ellipse';
 -->
-The basic currency of React programs is the signal. `Signal{T}` is an abstract type that represents a time-varying value of type `T`. You can create, mix and mash `Signal`s using React.
+The basic currency of Reactive programs is the signal. `Signal{T}` is an abstract type that represents a time-varying value of type `T`. You can create, mix and mash `Signal`s using Reactive.
 
 An `Input` is the most basic kind of signal: it has no *parents*--all updates to it are explicitly done through a call to `push!`.
 ```{.julia execute="false"}
@@ -83,7 +83,7 @@ y.value
 
 **Example: A stupid line-droid**
 
-In the examples below we explore how a simple line-follower robot could be programmed with React.
+In the examples below we explore how a simple line-follower robot could be programmed with Reactive.
 
 Here are the specifications of the robot:
 
@@ -220,7 +220,7 @@ lift(show_on_TV, alice, bob, stats)
 
 ## Timed signals and sampling
 
-The [`React.Timing`](api.html#timing) module contains some functions to create timed signals.
+The [`Reactive.Timing`](api.html#timing) module contains some functions to create timed signals.
 [`every`](api.html#every) can be used to create a signal that updates at a certain interval.
 
 ```{.julia execute="false"}
@@ -275,7 +275,7 @@ timestamped_votes = timestamp(votes)
 `timestamped_votes` is a signal of `(timestamp, vote)` where `timestamp` is a `Float64` timestamp denoting when the `vote` came in.
 
 # Possible uses
-I am currently using React to build interactive widgets on [IJulia](http://github.com/JuliaLang/IJulia.jl). React is aimed at making event-driven programming simple. You could use React to build:
+I am currently using Reactive to build interactive widgets on [IJulia](http://github.com/JuliaLang/IJulia.jl). Reactive is aimed at making event-driven programming simple. You could use Reactive to build:
 
 * Interactive user interfaces (watch out for [Interact.jl](https://github.com/shashi/Interact.jl))
 * Animations
@@ -284,4 +284,4 @@ I am currently using React to build interactive widgets on [IJulia](http://githu
 
 # Reporting Bugs
 
-Let me know about any bugs, counterintuitive behavior, or enhancements you'd like by [filing a bug](https://github.com/shashi/React.jl/issues/new) on github.
+Let me know about any bugs, counterintuitive behavior, or enhancements you'd like by [filing a bug](https://github.com/shashi/Reactive.jl/issues/new) on github.
