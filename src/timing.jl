@@ -1,6 +1,6 @@
 module Timing
 
-using React
+using ..Reactive
 
 export every, fpswhen, fps, timestamp
 
