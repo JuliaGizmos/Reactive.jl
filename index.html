@@ -3,23 +3,24 @@
 <head>
   <meta name="author" content="Shashi Gowda">
   <meta charset="utf-8">
-  <title>Introduction</title>
-  <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|PT+Sans|Source+Code+Pro'
+  <title>Introduction - Reactive.jl</title>
+  <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Source+Code+Pro:400,700'
         rel='stylesheet' type='text/css'>
   <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" media="all">
   <link href="css/custom.css" rel="stylesheet" type="text/css" media="all">
   <link href="css/hk-pyg.css" rel="stylesheet" type="text/css" media="all">
   <script src="js/jquery-2.0.3.min.js" type="text/javascript"></script>
   <script src="js/bootstrap.min.js" type="text/javascript"></script>
+  <script src="js/list.min.js" type="text/javascript"></script>
 </head>
 <body>
   <div id="topbar" style="z-index: 3">
     <div class="container">
       <div class="row">
         <ul>
-          <li><div id="pkgname">React 0.1.4+</div></li>
-          <li><a href="http://github.com/shashi/React.jl">Code</a></li>
-          <li><a href="http://github.com/shashi/React.jl/issues">Issues</a></li>
+          <li><div id="pkgname">Reactive 0.1.7+</div></li>
+          <li><a href="http://github.com/JuliaLang/Reactive.jl">Code</a></li>
+          <li><a href="http://github.com/JuliaLang/Reactive.jl/issues">Issues</a></li>
         </ul>
       </div>
     </div>
@@ -28,20 +29,17 @@
   <div class="container" style="z-index: auto">
     <div class="row">
       <div class="col-sm-7">
-      <div id="title-block">
-        <h1>Introduction</h1>
-      </div id="body-content">
-
+      <div id="body-content">
 <figure>
 <img src="Star-On-Machine.jpg" />
 </figure>
-<p>React.jl is a Julia package for <a href="http://en.wikipedia.org/Reactive_Programming">Reactive Programming</a>. It makes writing event-driven programs simple.</p>
-<p>React borrows its design from <a href="http://elm-lang.org/">Elm</a> (see also <a href="http://elm-lang.org/learn/What-is-FRP.elm">Functional Reactive Programming</a>).</p>
+<p>Reactive.jl is a Julia package for <a href="http://en.wikipedia.org/Reactive_Programming">Reactive Programming</a>. It makes writing event-driven programs simple.</p>
+<p>Reactive borrows its design from <a href="http://elm-lang.org/">Elm</a> (see also <a href="http://elm-lang.org/learn/What-is-FRP.elm">Functional Reactive Programming</a>).</p>
 <h1 id="getting-started">Getting Started</h1>
-<p>To install the latest release of React, run the following in the Julia REPL.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">Pkg.add(<span class="st">&quot;React&quot;</span>)</code></pre>
+<p>To install the latest release of Reactive, run the following in the Julia REPL.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">Pkg.add(<span class="st">&quot;Reactive&quot;</span>)</code></pre>
 <p>To start using it, import it:</p>
-<pre class="sourceCode julia julia"><code class="sourceCode julia">using React</code></pre>
+<pre class="sourceCode julia julia"><code class="sourceCode julia">using Reactive</code></pre>
 <h1 id="a-tutorial-introduction">A Tutorial Introduction</h1>
 <h2 id="signals">Signals</h2>
 <!-- the dot language mapping of signal types:
@@ -54,7 +52,7 @@
         merge: 'invtriangle';
         default: 'ellipse';
 -->
-<p>The basic currency of React programs is the signal. <code>Signal{T}</code> is an abstract type that represents a time-varying value of type <code>T</code>. You can create, mix and mash <code>Signal</code>s using React.</p>
+<p>The basic currency of Reactive programs is the signal. <code>Signal{T}</code> is an abstract type that represents a time-varying value of type <code>T</code>. You can create, mix and mash <code>Signal</code>s using Reactive.</p>
 <p>An <code>Input</code> is the most basic kind of signal: it has no <em>parents</em>--all updates to it are explicitly done through a call to <code>push!</code>.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
 x = Input(<span class="fl">0</span>)
@@ -86,7 +84,7 @@ xsquared.value
 y.value
 <span class="co"># =&gt; 12</span></code></pre>
 <p><strong>Example: A stupid line-droid</strong></p>
-<p>In the examples below we explore how a simple line-follower robot could be programmed with React.</p>
+<p>In the examples below we explore how a simple line-follower robot could be programmed with Reactive.</p>
 <p>Here are the specifications of the robot:</p>
 <ol type="1">
 <li>There are 3 sensors: left, middle and right</li>
@@ -141,7 +139,7 @@ right_motor = @lift sensor_input[<span class="fl">1</span>] - sensor_input[<span
 <p><strong>Example: A Voting System</strong> The following examples deal with a voting system in an election. The voters can either vote for Alice, Bob, or cast an invalid vote.</p>
 <p><a href="api.html#foldl"><code>foldl</code></a> can be used to accumulate a value over time. You might count the number of votes like this:</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">votes   = Input(:NoVote)    <span class="co"># We use :NoVote to denote the initial case</span>
-total   = foldl((acc, vote) -&gt; acc + (vote != :NoVote), <span class="fl">0</span>, votes) <span class="co"># Count all votes</span>
+total   = foldl((acc, vote) -&gt; acc + <span class="fl">1</span>, <span class="fl">0</span>, votes) <span class="co"># Count all votes</span>
 alice   = foldl((acc, vote) -&gt; acc + (vote == :Alice), <span class="fl">0</span>, votes)
 bob     = foldl((acc, vote) -&gt; acc + (vote == :Bob),   <span class="fl">0</span>, votes)
 leading = lift((a, b) -&gt; <span class="kw">if</span> a &gt; b ? :Alice : a &lt; b ? :Bob : :Tie, alice, bob)</code></pre>
@@ -175,7 +173,7 @@ secure_votes = dropwhen(security_breached, votes)</code></pre>
 <p>Finally,</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">lift(show_on_TV, alice, bob, stats)</code></pre>
 <h2 id="timed-signals-and-sampling">Timed signals and sampling</h2>
-<p>The <a href="api.html#timing"><code>React.Timing</code></a> module contains some functions to create timed signals. <a href="api.html#every"><code>every</code></a> can be used to create a signal that updates at a certain interval.</p>
+<p>The <a href="api.html#timing"><code>Reactive.Timing</code></a> module contains some functions to create timed signals. <a href="api.html#every"><code>every</code></a> can be used to create a signal that updates at a certain interval.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
 
 every10secs = every(<span class="fl">10.0</span>)</code></pre>
@@ -203,7 +201,7 @@ sensor_input = lift(read_sensors, fpswhen(circuit_not_complete, <span class="fl"
 timestamped_votes = timestamp(votes)</code></pre>
 <p><code>timestamped_votes</code> is a signal of <code>(timestamp, vote)</code> where <code>timestamp</code> is a <code>Float64</code> timestamp denoting when the <code>vote</code> came in.</p>
 <h1 id="possible-uses">Possible uses</h1>
-<p>I am currently using React to build interactive widgets on <a href="http://github.com/JuliaLang/IJulia.jl">IJulia</a>. React is aimed at making event-driven programming simple. You could use React to build:</p>
+<p>I am currently using Reactive to build interactive widgets on <a href="http://github.com/JuliaLang/IJulia.jl">IJulia</a>. Reactive is aimed at making event-driven programming simple. You could use Reactive to build:</p>
 <ul>
 <li>Interactive user interfaces (watch out for <a href="https://github.com/shashi/Interact.jl">Interact.jl</a>)</li>
 <li>Animations</li>
@@ -211,126 +209,72 @@ timestamped_votes = timestamp(votes)</code></pre>
 <li>Queueing systems and service-oriented apps</li>
 </ul>
 <h1 id="reporting-bugs">Reporting Bugs</h1>
-<p>Let me know about any bugs, counterintuitive behavior, or enhancements you'd like by <a href="https://github.com/shashi/React.jl/issues/new">filing a bug</a> on github.</p>
+<p>Let me know about any bugs, counterintuitive behavior, or enhancements you'd like by <a href="https://github.com/shashi/Reactive.jl/issues/new">filing a bug</a> on github.</p>
         <hr>
+      </div>
       </div>
 
       <div class="col-sm-offset-8" style="z-index: 2">
         <div id="table-of-contents">
           <div id="table-of-contents-content">
-            <ul class="toc list"><li>
-                <div class="toc-item"><a href="api.html">API</a></div>
+            <input class="search" placeholder="SEARCH" />
+            <ul class="toc list nav"><li>
+                <a class="toc-item toc-current-doc" href="index.html">Introduction - Reactive.jl</a>
             </li>
             <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="api.html#signals">Signals</div></a/>
+                <a style="margin-left: 0.5em" class="toc-item" href="#getting-started">Getting Started</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#signalt">Signal{T}</div></a/>
+                <a style="margin-left: 0.5em" class="toc-item" href="#a-tutorial-introduction">A Tutorial Introduction</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#inputt">Input{T}</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#signals">Signals</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#nodet">Node{T}</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#do-you-even-lift">Do you even lift?</a>
             </li>
             <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="api.html#transforming-signals">Transforming signals</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#the-event-loop">The Event Loop</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#lift">lift</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#maintaining-state">Maintaining State</a>
             </li>
             <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="api.html#state">State</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#filter-and-merge">Filter and merge</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#foldl">foldl</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#timed-signals-and-sampling">Timed signals and sampling</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#foldr">foldr</div></a/>
+                <a style="margin-left: 0.5em" class="toc-item" href="#possible-uses">Possible uses</a>
             </li>
             <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="api.html#filters-and-gates">Filters and Gates</div></a/>
+                <a style="margin-left: 0.5em" class="toc-item" href="#reporting-bugs">Reporting Bugs</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#filter">filter</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#dropif">dropif</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#droprepeats">droprepeats</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#keepwhen">keepwhen</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#dropwhen">dropwhen</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="api.html#sample-and-merge">Sample and Merge</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#sampleon">sampleon</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#merge">merge</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="api.html#timing">Timing</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#fps">fps</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#fpswhen">fpswhen</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#every">every</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#timestamp">timestamp</div></a/>
-            </li>
-            <li>
-                <div class="toc-item toc-current-doc"><a href="index.html">Introduction</a></div>
-            </li>
-            <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="index.html#getting-started">Getting Started</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="index.html#a-tutorial-introduction">A Tutorial Introduction</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="index.html#signals">Signals</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="index.html#do-you-even-lift">Do you even lift?</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="index.html#the-event-loop">The Event Loop</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="index.html#maintaining-state">Maintaining State</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="index.html#filter-and-merge">Filter and merge</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="index.html#timed-signals-and-sampling">Timed signals and sampling</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="index.html#possible-uses">Possible uses</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="index.html#reporting-bugs">Reporting Bugs</div></a/>
+                <a class="toc-item" href="api.html">API</a>
             </li>
             </ul>
+
+            <script>
+                var toclist = new List("table-of-contents",
+                                       {valueNames: ["toc-item"]})
+
+                $("body").scrollspy({target: "#table-of-contents"});
+
+                $("#table-of-contents li").on("activate.bs.scrollspy",
+                    function(event) {
+                        $("#table-of-contents ul").find("a").css({"font-weight": "normal"});
+                        $(this).children("a").css({"font-weight": "bolder"});
+                    });
+            </script>
           </div>
         </div>
       </div>
     </div>
 
   <footer class="col-sm-8">
-    <p class="muted">Last modified by Shashi Gowda on . Generated with
+    <p class="muted">Last modified by Shashi Gowda on Thu Aug 28 22:19:02 IST 2014. Generated with
     <a href="https://github.com/dcjones/Judo.jl">Judo</a>.</p>
   </footer>
 

@@ -4,22 +4,23 @@
   <meta name="author" content="Shashi Gowda">
   <meta charset="utf-8">
   <title>API</title>
-  <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|PT+Sans|Source+Code+Pro'
+  <link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700|Source+Code+Pro:400,700'
         rel='stylesheet' type='text/css'>
   <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" media="all">
   <link href="css/custom.css" rel="stylesheet" type="text/css" media="all">
   <link href="css/hk-pyg.css" rel="stylesheet" type="text/css" media="all">
   <script src="js/jquery-2.0.3.min.js" type="text/javascript"></script>
   <script src="js/bootstrap.min.js" type="text/javascript"></script>
+  <script src="js/list.min.js" type="text/javascript"></script>
 </head>
 <body>
   <div id="topbar" style="z-index: 3">
     <div class="container">
       <div class="row">
         <ul>
-          <li><div id="pkgname">React 0.1.4+</div></li>
-          <li><a href="http://github.com/shashi/React.jl">Code</a></li>
-          <li><a href="http://github.com/shashi/React.jl/issues">Issues</a></li>
+          <li><div id="pkgname">Reactive 0.1.7+</div></li>
+          <li><a href="http://github.com/JuliaLang/Reactive.jl">Code</a></li>
+          <li><a href="http://github.com/JuliaLang/Reactive.jl/issues">Issues</a></li>
         </ul>
       </div>
     </div>
@@ -28,10 +29,7 @@
   <div class="container" style="z-index: auto">
     <div class="row">
       <div class="col-sm-7">
-      <div id="title-block">
-        <h1>API</h1>
-      </div id="body-content">
-
+      <div id="body-content">
 <h1 id="signals">Signals</h1>
 <h2 id="signalt">Signal{T}</h2>
 <div class="api-doc">
@@ -40,7 +38,7 @@ A <code>Signal{T}</code> is a time-varying value of type T.
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">abstract</span> Signal{T}</code></pre>
 <h2 id="inputt">Input{T}</h2>
 <div class="api-doc">
-An <code>Input</code> is a signal which can be updated explicitly by code external to React. All other signal types have implicit update logic. <code>Input</code> signals can be updated by a call to <code>push!</code>. An <code>Input</code> must be created with an initial value.
+An <code>Input</code> is a signal which can be updated explicitly by code external to Reactive. All other signal types have implicit update logic. <code>Input</code> signals can be updated by a call to <code>push!</code>. An <code>Input</code> must be created with an initial value.
 </div>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">type</span> Input{T} &lt;: Signal{T} ... <span class="kw">end</span>
 i = Input(<span class="fl">0</span>)    <span class="co"># Construct an input signal of integers with the default value 0</span></code></pre>
@@ -174,8 +172,8 @@ a of the same type as s2 which updates with s1
 a merged signal
 </div>
 <h1 id="timing">Timing</h1>
-<p>Timing functions are available in the React.Timing module:</p>
-<pre class="sourceCode julia julia"><code class="sourceCode julia">using React.Timing</code></pre>
+<p>Timing functions are available in the Reactive.Timing module:</p>
+<pre class="sourceCode julia julia"><code class="sourceCode julia">using Reactive.Timing</code></pre>
 <h2 id="fps">fps</h2>
 <div class="api-doc">
 <p>Takes a desired number of frames per second and updates as quickly as possible at most the desired number of times a second.</p>
@@ -219,123 +217,108 @@ a signal of type (Float64, T) where the first element is the time at which the v
 </div>
         <hr>
       </div>
+      </div>
 
       <div class="col-sm-offset-8" style="z-index: 2">
         <div id="table-of-contents">
           <div id="table-of-contents-content">
-            <ul class="toc list"><li>
-                <div class="toc-item toc-current-doc"><a href="api.html">API</a></div>
+            <input class="search" placeholder="SEARCH" />
+            <ul class="toc list nav"><li>
+                <a class="toc-item" href="index.html">Introduction - Reactive.jl</a>
             </li>
             <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="api.html#signals">Signals</div></a/>
+                <a class="toc-item toc-current-doc" href="api.html">API</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#signalt">Signal{T}</div></a/>
+                <a style="margin-left: 0.5em" class="toc-item" href="#signals">Signals</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#inputt">Input{T}</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#signalt">Signal{T}</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#nodet">Node{T}</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#inputt">Input{T}</a>
             </li>
             <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="api.html#transforming-signals">Transforming signals</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#nodet">Node{T}</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#lift">lift</div></a/>
+                <a style="margin-left: 0.5em" class="toc-item" href="#transforming-signals">Transforming signals</a>
             </li>
             <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="api.html#state">State</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#lift">lift</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#foldl">foldl</div></a/>
+                <a style="margin-left: 0.5em" class="toc-item" href="#state">State</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#foldr">foldr</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#foldl">foldl</a>
             </li>
             <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="api.html#filters-and-gates">Filters and Gates</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#foldr">foldr</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#filter">filter</div></a/>
+                <a style="margin-left: 0.5em" class="toc-item" href="#filters-and-gates">Filters and Gates</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#dropif">dropif</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#filter">filter</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#droprepeats">droprepeats</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#dropif">dropif</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#keepwhen">keepwhen</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#droprepeats">droprepeats</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#dropwhen">dropwhen</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#keepwhen">keepwhen</a>
             </li>
             <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="api.html#sample-and-merge">Sample and Merge</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#dropwhen">dropwhen</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#sampleon">sampleon</div></a/>
+                <a style="margin-left: 0.5em" class="toc-item" href="#sample-and-merge">Sample and Merge</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#merge">merge</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#sampleon">sampleon</a>
             </li>
             <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="api.html#timing">Timing</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#merge">merge</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#fps">fps</div></a/>
+                <a style="margin-left: 0.5em" class="toc-item" href="#timing">Timing</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#fpswhen">fpswhen</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#fps">fps</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#every">every</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#fpswhen">fpswhen</a>
             </li>
             <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="api.html#timestamp">timestamp</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#every">every</a>
             </li>
             <li>
-                <div class="toc-item"><a href="index.html">Introduction</a></div>
-            </li>
-            <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="index.html#getting-started">Getting Started</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="index.html#a-tutorial-introduction">A Tutorial Introduction</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="index.html#signals">Signals</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="index.html#do-you-even-lift">Do you even lift?</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="index.html#the-event-loop">The Event Loop</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="index.html#maintaining-state">Maintaining State</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="index.html#filter-and-merge">Filter and merge</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 2em" class="toc-item"><a href="index.html#timed-signals-and-sampling">Timed signals and sampling</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="index.html#possible-uses">Possible uses</div></a/>
-            </li>
-            <li>
-                <div style="margin-left: 1em" class="toc-item"><a href="index.html#reporting-bugs">Reporting Bugs</div></a/>
+                <a style="margin-left: 1.0em" class="toc-item" href="#timestamp">timestamp</a>
             </li>
             </ul>
+
+            <script>
+                var toclist = new List("table-of-contents",
+                                       {valueNames: ["toc-item"]})
+
+                $("body").scrollspy({target: "#table-of-contents"});
+
+                $("#table-of-contents li").on("activate.bs.scrollspy",
+                    function(event) {
+                        $("#table-of-contents ul").find("a").css({"font-weight": "normal"});
+                        $(this).children("a").css({"font-weight": "bolder"});
+                    });
+            </script>
           </div>
         </div>
       </div>
     </div>
 
   <footer class="col-sm-8">
-    <p class="muted">Last modified by Shashi Gowda on . Generated with
+    <p class="muted">Last modified by Shashi Gowda on Thu Aug 28 22:19:02 IST 2014. Generated with
     <a href="https://github.com/dcjones/Judo.jl">Judo</a>.</p>
   </footer>
 
