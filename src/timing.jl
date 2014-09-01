@@ -26,7 +26,7 @@ end
 #     freq: the maximum frequency at which fpswhen should update
 # Returns:
 #     an signal of Float64 time deltas
-function fpswhen(test::Signal{Bool}, freq::Float64)
+function fpswhen(test::Signal{Bool}, freq)
     diff = Input(0.0)
 
     local delta = 1/freq, t0 = time(),
@@ -61,8 +61,8 @@ fpswhen(test, freq) = fpswhen(signal(test), freq)
 #     freq: the desired fps
 # Returns:
 #     a signal of time delta between two updates
-function fps(freq::Float64)
-    return fpswhen(Input(true), freq)
+function fps(freq)
+    return fpswhen(Input(true), float(freq))
 end
 
 # Timestamp a signal.
