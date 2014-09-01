@@ -303,7 +303,7 @@ lift(f::Callable, inputs...; init=f([signal(i).value for i in inputs]...)) =
 #     signals: as many signals as one less than the arity of f.
 # Returns:
 #     A signal which updates when one of the argument signals update.
-function foldl{T}(f::Function, v0::T, signal::Signal, signals::Signal...)
+function foldl{T}(f::Function, v0::T, signal, signals...)
     local a = v0
     function inner(b...)
         a = f(a, b...)
@@ -311,7 +311,7 @@ function foldl{T}(f::Function, v0::T, signal::Signal, signals::Signal...)
     lift(inner, T, signal, signals...; init=v0)
 end
 
-function foldr{T}(f::Function, v0::T, signal::Signal, signals::Signal...)
+function foldr{T}(f::Function, v0::T, signal, signals...)
     local a = v0
     function inner(b...)
         a = f(b..., a)

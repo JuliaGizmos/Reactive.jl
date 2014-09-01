@@ -52,6 +52,7 @@ function fpswhen(test::Signal{Bool}, freq::Float64)
 
     return lift(gate, Float64, test, diff)
 end
+fpswhen(test, freq) = fpswhen(signal(test), freq)
 
 # Takes a desired number of frames per second and updates
 # as quickly as possible at most the desired number of times a second.
@@ -74,6 +75,7 @@ end
 function timestamp{T}(s::Signal{T})
     return lift(x -> (time(), x), (Float64, T), s)
 end
+taimestamp(s) = timestamp(signal(s))
 
 # Collect signal updates into lists of updates within a given time
 # period.
