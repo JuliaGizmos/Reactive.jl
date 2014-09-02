@@ -201,7 +201,7 @@ begin
     #     nothing
     function push!{T}(input::Input{T}, val::T)
         if isupdating
-            error("push! must be called asynchronously")
+            error("push! called when another signal is still updating.")
         else
             try
                 isupdating = true
