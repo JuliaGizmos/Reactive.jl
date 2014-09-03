@@ -1,7 +1,3 @@
-module Timing
-
-using ..Reactive
-
 export every, fpswhen, fps, timestamp
 
 # Create a signal of timestamps that updates every delta seconds
@@ -110,4 +106,3 @@ taimestamp(s) = timestamp(signal(s))
 ##     return i
 ## end
 
-end # module
