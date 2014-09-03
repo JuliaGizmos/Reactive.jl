@@ -106,3 +106,8 @@ taimestamp(s) = timestamp(signal(s))
 ##     return i
 ## end
 
+# Remove this in a 0.2 release
+module Timing
+import Reactive: fps, fpswhen, every, timestamp
+export fps, fpswhen, every, timestamp
+end
