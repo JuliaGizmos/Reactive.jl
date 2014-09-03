@@ -13,7 +13,7 @@ if VERSION >= v"0.3-"
     import Base: foldl, foldr
 end
 
-typealias Callable Union(Type, Function)
+typealias Callable Union(DataType, Function)
 
 # A `Signal{T}` is a time-varying value of type T.
 abstract Signal{T}
