@@ -89,12 +89,7 @@ z = @lift (x, 2y, x*y)
 ## merge
 {{{merge}}}
 
-# Timing
-
-Timing functions are available in the Reactive.Timing module:
-```julia
-using Reactive.Timing
-```
+# Timed Signals
 
 ## fps
 {{{fps}}}

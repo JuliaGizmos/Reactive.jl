@@ -220,7 +220,7 @@ lift(show_on_TV, alice, bob, stats)
 
 ## Timed signals and sampling
 
-The [`Reactive.Timing`](api.html#timing) module contains some functions to create timed signals.
+Reactive provides functions to create timed signals.
 [`every`](api.html#every) can be used to create a signal that updates at a certain interval.
 
 ```{.julia execute="false"}
