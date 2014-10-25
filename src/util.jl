@@ -1,4 +1,4 @@
-function prev{T}(s::Signal{T}, first::T)
+function prev{T}(s::Signal{T}, first)
     fst(x) = x[1]
     folder(a, b) = (a[2], b)
     lift(fst,
@@ -17,7 +17,7 @@ end
 #     s:    the signal to drop updates on
 # Returns:
 #     a filtered signal
-dropif{T}(pred::Function, v0::T, s::Signal{T}) = filter(x->!pred(x), v0, s)
+dropif(pred::Function, v0, s::SignalSource) = filter(x->!pred(x), v0, s)
 
 # Keep only updates to the second signal only when the first signal is true.
 # Complements dropwhen.
@@ -28,6 +28,6 @@ dropif{T}(pred::Function, v0::T, s::Signal{T}) = filter(x->!pred(x), v0, s)
 #     s:    the signal to filter
 # Returns:
 #     a signal which updates only when the test signal is true
-function keepwhen{T}(test::Signal{Bool}, v0::T, s::Signal{T})
+function keepwhen(test::Signal{Bool}, v0, s::SignalSource)
     dropwhen(lift(!, Bool, test), v0, s)
 end
