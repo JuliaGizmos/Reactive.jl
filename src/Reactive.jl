@@ -3,11 +3,11 @@ module Reactive
 using Base.Order
 using Base.Collections
 
-export Signal, Input, Node, signal, value, lift, @lift, map, foldl,
+export SignalSource, Signal, Input, Node, signal, value, lift, @lift, map, foldl,
        foldr, merge, filter, dropif, droprepeats, dropwhen,
        sampleon, prev, keepwhen, ⟿
 
-import Base: push!, merge, map, show, writemime, filter
+import Base: eltype, join_eltype, convert, push!, merge, map, show, writemime, filter
 
 if VERSION >= v"0.3-"
     import Base: foldl, foldr
@@ -15,8 +15,18 @@ end
 
 typealias Callable Union(DataType, Function)
 
+# SignalSource is a contract that you can call signal() on the
+# value to get a Signal
+abstract SignalSource
+
 # A `Signal{T}` is a time-varying value of type T.
-abstract Signal{T}
+# Signal itself is a subtype of SignalSource for easy
+# dispatch (e.g. see foldl below)
+abstract Signal{T} <: SignalSource
+signal(x::Signal) = x
+
+convert(::Type{Signal}, x::SignalSource) = signal(x)
+eltype{T}(::Signal{T}) = T
 
 # A topological order
 begin
@@ -28,7 +38,6 @@ begin
     end
 end
 
-signal(x::Signal) = x
 rank(x::Signal) = x.rank # topological rank
 value(x::Signal) = x.value # current value
 
@@ -41,11 +50,11 @@ type Input{T} <: Signal{T}
     children::Vector{Signal}
     value::T
 
-    function Input(v::T)
-        new(next_rank(), Signal[], v)
+    function Input(v)
+        new(next_rank(), Signal[], convert(T, v))
     end
 end
-Input{T}(val::T) = Input{T}(val)
+Input{T}(v::T) = Input{T}(v)
 
 # An intermediate node. A `Node` can be created by functions
 # in this library that return signals.
@@ -64,15 +73,15 @@ type Lift{T} <: Node{T}
     f::Callable
     signals::(Signal...)
     value::T
-    function Lift(f::Callable, signals::Signal...;
-                  init::T=convert(T, f([s.value for s in signals]...)))
-        node = new(next_rank(), Signal[], f, signals, init)
+
+    function Lift(f::Callable, signals, init)
+        node = new(next_rank(), Signal[], f, signals, convert(T, init))
         add_child!(signals, node)
         return node
     end
 end
 
-function update{T, U}(node::Lift{T}, parent::Signal{U})
+function update{T}(node::Lift{T}, parent)
     node.value = convert(T, node.f([s.value for s in node.signals]...))
     return true
 end
@@ -83,10 +92,11 @@ type Filter{T} <: Node{T}
     predicate::Function
     signal::Signal{T}
     value::T
-    function Filter(predicate::Function, v0::T, s::Signal{T})
+
+    function Filter(predicate, v0, s::Signal{T})
         node = new(next_rank(), Signal[], predicate, s,
                    predicate(s.value) ?
-                   s.value : v0)
+                   s.value : convert(T, v0))
         add_child!(s, node)
         return node
     end
@@ -107,9 +117,10 @@ type DropWhen{T} <: Node{T}
     test::Signal{Bool}
     signal::Signal{T}
     value::T
-    function DropWhen(test::Signal{Bool}, default::T, s::Signal{T})
+
+    function DropWhen(test, v0, s::Signal{T})
         node = new(next_rank(), Signal[], test, s,
-                   test.value ? default : s.value)
+                   test.value ? convert(T, v0) : s.value)
         add_child!(s, node)
         return node
     end
@@ -129,7 +140,8 @@ type DropRepeats{T} <: Node{T}
     children::Vector{Signal}
     signal::Signal{T}
     value::T
-    function DropRepeats(s::Signal{T})
+
+    function DropRepeats(s)
         node = new(next_rank(), Signal[], s, s.value)
         add_child!(s, node)
         return node
@@ -148,10 +160,10 @@ end
 type Merge{T} <: Node{T}
     rank::Uint
     children::Vector{Signal}
-    signals::(Signal{T}...)
+    signals::(Signal...)
     ranks::Dict{Signal, Int}
     value::T
-    function Merge(signals::Signal...)
+    function Merge(signals::(Signal...))
         if length(signals) < 1
             error("Merge requires at least one as argument.")
         end
@@ -166,8 +178,8 @@ type Merge{T} <: Node{T}
     end
 end
 
-function update{T}(node::Merge{T}, parent::Signal{T})
-    node.value = parent.value
+function update{T}(node::Merge{T}, parent)
+    node.value = convert(T, parent.value)
     return true
 end
 
@@ -184,7 +196,7 @@ type SampleOn{T, U} <: Node{U}
     end
 end
 
-function update{T, U}(node::SampleOn{T, U}, parent::Signal{T})
+function update(node::SampleOn, parent)
     node.value = node.signal2.value
     return true
 end
@@ -199,13 +211,13 @@ begin
     #     val: The new value to be set
     # Returns:
     #     nothing
-    function push!{T}(input::Input{T}, val::T)
+    function push!{T}(input::Input{T}, val)
         if isupdating
             error("push! called when another signal is still updating.")
         else
             try
                 isupdating = true
-                input.value = val
+                input.value = convert(T, val)
 
                 heap = (Signal, Signal)[] # a min-heap of (child, parent)
                 child_rank(x) = rank(x[1])
@@ -260,8 +272,6 @@ begin
     end
 end
 
-push!{T}(inp::Input{T}, val) = push!(inp, convert(T, val))
-
 # The `lift` operator can be used to create a new signal from
 # existing signals. The value of the new signal will be the return
 # value of a function `f` applied to the current values of the input
@@ -273,15 +283,18 @@ push!{T}(inp::Input{T}, val) = push!(inp, convert(T, val))
 #     inputs...: Signals to apply `f` to. Same number as the arity of `f`.
 # Returns:
 #     a signal which updates when an argument signal updates.
-lift(f::Callable, output_type::Type, inputs::Signal...; kwargs...) =
-    Lift{output_type}(f, inputs...; kwargs...)
 
-lift(f::Callable, output_type::Type, inputs...; kwargs...) =
-    Lift{output_type}(f, map(signal, inputs)...; kwargs...)
+lift(f::Callable, inputs::Signal...; init=apply(f, map(value, inputs))) =
+    Lift{typeof(init)}(f, inputs, init)
 
-lift(f::Callable, inputs...; init=f([signal(i).value for i in inputs]...)) =
-    lift(f, typeof(init), inputs..., init=init)
+lift(f::Callable, output_type::Type, inputs::Signal...; init=apply(f, map(value, inputs))) =
+    Lift{output_type}(f, inputs, init)
 
+lift(f::Callable, output_type::Type, inputs::SignalSource...; kwargs...) =
+    lift(f, output_type, map(signal, inputs)...; kwargs...)
+
+lift(f::Callable, inputs::SignalSource...; kwargs...) =
+    lift(f, map(signal, inputs)...; kwargs...)
 
 # Uncomment in Julia >= 0.3 to enable cute infix operators.
 #     ⟿(signals::(Any...), f::Callable) = lift(f, signals...)
@@ -303,20 +316,16 @@ lift(f::Callable, inputs...; init=f([signal(i).value for i in inputs]...)) =
 #     signals: as many signals as one less than the arity of f.
 # Returns:
 #     A signal which updates when one of the argument signals update.
-function foldl{T}(f::Function, v0::T, signal, signals...)
+function foldl{T}(f, v0::T, signal::SignalSource, signals::SignalSource...; output_type=T)
     local a = v0
-    function inner(b...)
-        a = f(a, b...)
-    end
-    lift(inner, T, signal, signals...; init=v0)
+    lift((b...) -> a = f(a, b...),
+        output_type, signal, signals...; init=v0)
 end
 
-function foldr{T}(f::Function, v0::T, signal, signals...)
+function foldr{T}(f::Function, v0::T, signal::SignalSource, signals::SignalSource...; output_type=T)
     local a = v0
-    function inner(b...)
-        a = f(b..., a)
-    end
-    lift(inner, T, signal, signals...; init=v0)
+    lift((b...) -> a = f(b..., a),
+        output_type, signal, signals...; init=v0)
 end
 
 # Keep only updates that return true when applied to a predicate function.
@@ -327,8 +336,8 @@ end
 #     s:    the signal to be filtered
 # Returns:
 #     A filtered signal
-filter{T}(pred::Function, v0::T, s::Signal{T}) = Filter{T}(pred, v0, s)
-filter(pred::Function, v0, s) = filter(pred, v0, signal(s))
+filter{T}(pred::Function, v0, s::Signal{T}) = Filter{T}(pred, v0, s)
+filter(pred::Function, v0, s::SignalSource) = filter(pred, v0, signal(s))
 
 # Drop updates when the first signal is true.
 #
@@ -338,9 +347,8 @@ filter(pred::Function, v0, s) = filter(pred, v0, signal(s))
 #     s:    the signal to drop updates from
 # Return:
 #     a signal which updates only when the test signal is false
-dropwhen{T}(test::Signal{Bool}, v0::T, s::Signal{T}) =
-    DropWhen{T}(test, v0, s::Signal)
-dropwhen(test, v0, s) = dropwhen(signal(test), v0, signal(s))
+dropwhen{T}(test::Signal{Bool}, v0, s::Signal{T}) =
+    DropWhen{T}(test, v0, s)
 
 # Sample from the second signal every time an update occurs in the first signal
 #
@@ -350,7 +358,7 @@ dropwhen(test, v0, s) = dropwhen(signal(test), v0, signal(s))
 # Returns:
 #     a of the same type as s2 which updates with s1
 sampleon{T, U}(s1::Signal{T}, s2::Signal{U}) = SampleOn{T, U}(s1, s2)
-sampleon(s1, s2) = sampleon(signal(s1), signal(s2))
+sampleon(s1::SignalSource, s2::SignalSource) = sampleon(signal(s1), signal(s2))
 
 # Merge multiple signals of the same type. If more than one signals
 # update together, the first one gets precedence.
@@ -359,8 +367,8 @@ sampleon(s1, s2) = sampleon(signal(s1), signal(s2))
 #     signals...: two or more signals
 # Returns:
 #     a merged signal
-merge{T}(signals::Signal{T}...) = Merge{T}(signals...)
-merge(signals) = merge(map(signal, signals)...)
+merge(signals::Signal...) = Merge{join_eltype(map(eltype, signals)...)}(signals)
+merge(signals::SignalSource...) = merge(map(signal, signals))
 
 # Drop repeated updates. To be used on signals of immutable types.
 #
@@ -369,7 +377,7 @@ merge(signals) = merge(map(signal, signals)...)
 # Returns:
 #     a signal with repeats dropped.
 droprepeats{T}(s::Signal{T}) = DropRepeats{T}(s)
-droprepeats(s) = droprepeats(signal(s))
+droprepeats(s::SignalSource) = droprepeats(signal(s))
 
 function show{T}(io::IO, node::Signal{T})
     write(io, string("[$(typeof(node))] ", node.value))
