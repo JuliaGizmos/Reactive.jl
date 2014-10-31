@@ -284,10 +284,10 @@ end
 # Returns:
 #     a signal which updates when an argument signal updates.
 
-lift(f::Callable, inputs::Signal...; init=apply(f, map(value, inputs))) =
+lift(f::Callable, inputs::Signal...; init=f(map(value, inputs)...)) =
     Lift{typeof(init)}(f, inputs, init)
 
-lift(f::Callable, output_type::Type, inputs::Signal...; init=apply(f, map(value, inputs))) =
+lift(f::Callable, output_type::Type, inputs::Signal...; init=f(map(value, inputs)...)) =
     Lift{output_type}(f, inputs, init)
 
 lift(f::Callable, output_type::Type, inputs::SignalSource...; kwargs...) =
