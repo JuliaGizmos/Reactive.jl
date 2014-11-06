@@ -266,6 +266,8 @@ begin
             catch e
                 # FIXME: Rethink this.
                 isupdating = false
+                Base.show_backtrace(STDERR, catch_backtrace())
+                println(STDERR, "\n")
                 throw(e)
             end
         end
