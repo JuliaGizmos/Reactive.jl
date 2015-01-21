@@ -22,3 +22,12 @@ push!(x, 3)
 @test l1.value == [x.value]
 @test l2.value == [x.value, y.value^2]
 @test c1.value ==  {x.value}
+
+# test use in a function
+k = 3
+f(x,y) = @lift x + y + 1 + k
+
+z = f(x,y)
+push!(x, 3)
+@test x.value^2 + x.value + 4 == z.value
+
