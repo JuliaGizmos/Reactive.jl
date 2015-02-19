@@ -221,7 +221,7 @@ type Flatten{T} <: Node{T}
 
         firstsig = value(signalsignal)
         add_child!(signalsignal, node)
-        foldl(begin add_child!(firstsig, node); firstsig end, signalsignal) do prev, next
+        foldl(begin add_child!(firstsig, node); firstsig end, signalsignal; output_type=Any) do prev, next
             remove_child!(prev, node)
             add_child!(next, node)
             next
@@ -232,8 +232,7 @@ type Flatten{T} <: Node{T}
 end
 
 function update(node::Flatten, parent)
-    println("Updating flatten because ", parent, " changed")
-    node.value = value(parent)
+    node.value = deepvalue(parent)
     return true
 end
 
@@ -299,12 +298,14 @@ begin
                 end
                 isupdating = false
                 return nothing
-            catch e
+            catch ex
                 # FIXME: Rethink this.
                 isupdating = false
+                showerror(STDERR, ex)
+                println(STDERR)
                 Base.show_backtrace(STDERR, catch_backtrace())
-                println(STDERR, "\n")
-                throw(e)
+                println(STDERR)
+                throw(ex)
             end
         end
     end
