@@ -4,7 +4,7 @@ using Base.Order
 using Base.Collections
 
 export SignalSource, Signal, Input, Node, signal, value, lift, @lift, map, foldl,
-       foldr, merge, filter, dropif, droprepeats, dropwhen,
+       flatten, foldr, merge, filter, dropif, droprepeats, dropwhen,
        sampleon, prev, keepwhen, ⟿
 
 import Base: eltype, join_eltype, convert, push!, merge, map, show, writemime, filter
@@ -66,6 +66,14 @@ function add_child!(parents::(Signal...), child::Signal)
     end
 end
 add_child!(parent::Signal, child::Signal) = push!(parent.children, child)
+
+function remove_child!(parents::(Signal...), child::Signal)
+    for p in parents
+        p.children = p.children[find(p.children .!= child)]
+    end
+end
+remove_child!(parent::Signal, child::Signal) =
+    remove_child!((parent,), child)
 
 type Lift{T} <: Node{T}
     rank::Uint
@@ -198,6 +206,34 @@ end
 
 function update(node::SampleOn, parent)
     node.value = node.signal2.value
+    return true
+end
+
+deepvalue(s::Signal) = value(s)
+deepvalue{T <: Signal}(s::Signal{T}) = deepvalue(value(s))
+
+type Flatten{T} <: Node{T}
+    rank::Uint
+    children::Vector{Signal}
+    value::T
+    function Flatten(signalsignal::Signal)
+        node = new(next_rank(), Signal[], deepvalue(signalsignal))
+
+        firstsig = value(signalsignal)
+        add_child!(signalsignal, node)
+        foldl(begin add_child!(firstsig, node); firstsig end, signalsignal) do prev, next
+            remove_child!(prev, node)
+            add_child!(next, node)
+            next
+        end
+
+        return node
+    end
+end
+
+function update(node::Flatten, parent)
+    println("Updating flatten because ", parent, " changed")
+    node.value = value(parent)
     return true
 end
 
@@ -385,10 +421,20 @@ function show{T}(io::IO, node::Signal{T})
     write(io, string("[$(typeof(node))] ", node.value))
 end
 
+#
+# Flatten a signal of signal into a signal
+#
+# Args:
+#    ss: the signal of signals
+# Returns:
+#    A signal
+#
+flatten(ss::Signal; typ=eltype(value(ss))) =
+    Flatten{typ}(ss)
+
 function writemime{T}(io::IO, m::MIME"text/plain", node::Signal{T})
     writemime(io, m, node.value)
 end
-
 
 include("macros.jl")
 include("timing.jl")
