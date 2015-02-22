@@ -15,15 +15,7 @@ function sub_val(ex::Expr, m::Module)
     elseif ex.head == :kw
         ex.args[2] = sub_val(ex.args[2], m)
     end
-    if ex.head == :call
-        try
-            eval(m, ex)
-        catch MethodError e
-            return ex
-        end
-    else
-        return ex
-    end
+    return ex
 end
 
 function extract_signals!(ex, m::Module, dict::Dict{Any, Symbol})
@@ -63,15 +55,19 @@ end
 # Args:
 #    expr: Expression
 macro lift(ex)
-    ex = sub_val(ex, current_module())
-    ex, sigs = extract_signals(ex, current_module())
-    args = Symbol[]
-    vals = Any[]
-    for (k, v) in sigs
-        push!(args, v)
-        push!(vals, k)
-    end
-    esc(Expr(:call, :lift,
-             Expr(:->, Expr(:tuple, args...), ex),
-             vals...))
+    ex = Expr(:quote, ex)
+    esc(quote
+        ex = Reactive.sub_val($ex, current_module())
+        ex, sigs = Reactive.extract_signals(ex, current_module())
+        args = Symbol[]
+        vals = Any[]
+        for (k, v) in sigs
+            push!(args, v)
+            push!(vals, k)
+        end
+        eval(current_module(),
+             Expr(:call, :lift,
+                  Expr(:->, Expr(:tuple, args...), ex),
+                  vals...))
+    end)
 end

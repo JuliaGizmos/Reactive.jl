@@ -406,7 +406,7 @@ sampleon(s1::SignalSource, s2::SignalSource) = sampleon(signal(s1), signal(s2))
 #     signals...: two or more signals
 # Returns:
 #     a merged signal
-merge(signals::Signal...) = Merge{join_eltype(map(eltype, signals)...)}(signals)
+merge(signals::Signal...) = Merge{join_eltype(signals...)}(signals)
 merge(signals::SignalSource...) = merge(map(signal, signals))
 
 # Drop repeated updates. To be used on signals of immutable types.
