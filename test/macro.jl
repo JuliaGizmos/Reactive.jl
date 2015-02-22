@@ -1,33 +1,41 @@
-x = Input(1)
+using Reactive
+using FactCheck
 
-# basic lift macro
-y = @lift x^2
+facts("@lift") do
+    a = Input(1)
+    b = @lift a^2
+    context("@lift basics") do
+        @fact a.value^2 => b.value
 
-@test x.value^2 == y.value
+        push!(a, 2)
 
-push!(x, 2)
+        @fact a.value^2 => b.value
+    end
 
-@test x.value^2 == y.value
+    t1 = @lift (a,)
+    t2 = @lift (a, b)
+    l1 = @lift [a]
+    l2 = @lift [a, b^2]
+    c1 = @lift {a}
 
-t1 = @lift (x,)
-t2 = @lift (x, y)
-l1 = @lift [x]
-l2 = @lift [x, y^2]
-c1 = @lift {x}
+    push!(a, 3)
 
-push!(x, 3)
+    context("@lift evaluation") do
+        @fact t1.value => (a.value,)
+        @fact t2.value => (a.value, b.value)
+        @fact l1.value => [a.value]
+        @fact l2.value => [a.value, b.value^2]
+        @fact c1.value =>  {a.value}
+    end
 
-@test t1.value == (x.value,)
-@test t2.value == (x.value, y.value)
-@test l1.value == [x.value]
-@test l2.value == [x.value, y.value^2]
-@test c1.value ==  {x.value}
+    # test use in a function
+    context("@lift inside a function") do
+        k = 3
+        f(a,b) = @lift a + b + 1 + k
 
-# test use in a function
-k = 3
-f(x,y) = @lift x + y + 1 + k
+        z = f(a,b)
+        push!(a, 3)
+        @fact a.value^2 + a.value + 4 => z.value
+    end
 
-z = f(x,y)
-push!(x, 3)
-@test x.value^2 + x.value + 4 == z.value
-
+end

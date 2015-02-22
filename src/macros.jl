@@ -15,21 +15,19 @@ function sub_val(ex::Expr, m::Module)
     elseif ex.head == :kw
         ex.args[2] = sub_val(ex.args[2], m)
     end
-    return ex
 end
 
 function extract_signals!(ex, m::Module, dict::Dict{Any, Symbol})
-    if applicable(signal, ex)
-       if haskey(dict, signal(ex))
-           return dict[signal(ex)]
-       else
-           sym = gensym()
-           dict[signal(ex)] = sym
-           return sym
-       end
-    else
-        return ex
-    end
+    return ex
+end
+function extract_signals!(ex::SignalSource, m::Module, dict::Dict{Any, Symbol})
+   if haskey(dict, signal(ex))
+       return dict[signal(ex)]
+   else
+       sym = gensym()
+       dict[signal(ex)] = sym
+       return sym
+   end
 end
 
 function extract_signals!(ex::Expr, m::Module, dict::Dict{Any, Symbol})
