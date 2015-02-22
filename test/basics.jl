@@ -1,113 +1,139 @@
-using Base.Test
+using FactCheck
 using Reactive
 
 number() = int(rand()*1000)
 
+
 ## Basics
 
-a = Input(number())
-b = lift(x -> x*x, a)
+facts("Basic checks") do
 
-# Lift type
-@test isa(b, Reactive.Lift{Int})
+    a = Input(number())
+    b = lift(x -> x*x, a)
 
-# type conversion
-push!(a, 1.0)
-@test b.value == 1
-# don't specify exception type, to remain compatible with 0.2
-@test_throws InexactError push!(a, 1.1)
+    context("lift") do
 
-push!(a, number())
-@test b.value == a.value*a.value
+        # Lift type
+        @fact typeof(b) => Reactive.Lift{Int}
 
-push!(a, -number())
-@test b.value == a.value*a.value
+        # type conversion
+        push!(a, 1.0)
+        @fact b.value => 1
+        # InexactError to be precise
+        @fact_throws push!(a, 1.1)
 
-## Multiple inputs to Lift
-c = lift(+, Int, a, b)
-@test c.value == a.value + b.value
+        push!(a, number())
+        @fact b.value => a.value*a.value
 
-push!(a, number())
-@test c.value == a.value+b.value
+        push!(a, -number())
+        @fact b.value => a.value*a.value
 
-## Merge
-d = Input(number())
-e = merge(d, b, a)
+        ## Multiple inputs to Lift
+        c = lift(+, Int, a, b)
+        @fact c.value => a.value + b.value
 
-# precedence to d
-@test e.value == d.value
+        push!(a, number())
+        @fact c.value => a.value+b.value
 
-push!(a, number())
-# precedence to b over a
-@test e.value == b.value
+        push!(a, number())
+        @fact c.value => a.value+b.value
+    end
 
-## foldl over time
-push!(a, 0)
-f = foldl(+, 0, a)
-nums = int(rand(100)*1000)
-map(x -> push!(a, x), nums)
 
-@test sum(nums) == f.value
+    context("merge") do
 
-# filter
-g = Input(0)
-pred = x -> x % 2 != 0
-h = filter(pred, 1, g)
+        ## Merge
+        d = Input(number())
+        e = merge(d, b, a)
 
-@test h.value == 1
+        # precedence to d
+        @fact e.value => d.value
 
-push!(g, 2)
-@test h.value == 1
+        push!(a, number())
+        # precedence to b over a
+        @fact e.value => b.value
+    end
 
-push!(g, 3)
-@test h.value == 3
+    context("foldl") do
 
-# sampleon
+        ## foldl over time
+        push!(a, 0)
+        f = foldl(+, 0, a)
+        nums = int(rand(100)*1000)
+        map(x -> push!(a, x), nums)
 
-push!(g, number())
-i = Input(true)
-j = sampleon(i, g)
-# default value
-@test j.value == g.value
-push!(g, g.value-1)
-@test j.value == g.value+1
-push!(i, true)
-@test j.value == g.value
+        @fact sum(nums) => f.value
+    end
 
-# droprepeats
-count = s -> foldl((x, y) -> x+1, 0, s)
+    context("filter") do
+        # filter
+        g = Input(0)
+        pred = x -> x % 2 != 0
+        h = filter(pred, 1, g)
 
-k = Input(1)
-l = droprepeats(k)
+        @fact h.value => 1
 
-@test l.value == k.value
-push!(k, 1)
-@test l.value == k.value
-push!(k, 0)
-#println(l.value, " ", k.value)
-@test l.value == k.value
+        push!(g, 2)
+        @fact h.value => 1
 
-m = count(k)
-n = count(l)
+        push!(g, 3)
+        @fact h.value => 3
+    end
 
-seq = [1, 1, 1, 0, 1, 0, 1, 0, 0]
-map(x -> push!(k, x), seq)
+    context("sampleon") do
+        # sampleon
+        g = Input(0)
 
-@test m.value == length(seq)
-@test n.value == 6
+        push!(g, number())
+        i = Input(true)
+        j = sampleon(i, g)
+        # default value
+        @fact j.value => g.value
+        push!(g, g.value-1)
+        @fact j.value => g.value+1
+        push!(i, true)
+        @fact j.value => g.value
+    end
 
-# dropwhen
-b = Input(true)
-n = Input(1)
-dw = dropwhen(b, 0, n)
-@test dw.value == 0
-push!(n, 2)
-@test dw.value == 0
-push!(b, false)
-@test dw.value == 0
-push!(n, 1)
-@test dw.value == 1
-push!(n, 2)
-@test dw.value == 2
-dw = dropwhen(b, 0, n)
-@test dw.value == 2
+    context("droprepeats") do
+        # droprepeats
+        count = s -> foldl((x, y) -> x+1, 0, s)
+
+        k = Input(1)
+        l = droprepeats(k)
+
+        @fact l.value => k.value
+        push!(k, 1)
+        @fact l.value => k.value
+        push!(k, 0)
+        #println(l.value, " ", k.value)
+        @fact l.value => k.value
+
+        m = count(k)
+        n = count(l)
+
+        seq = [1, 1, 1, 0, 1, 0, 1, 0, 0]
+        map(x -> push!(k, x), seq)
+
+        @fact m.value => length(seq)
+        @fact n.value => 6
+    end
+
+    context("dropwhen") do
+        # dropwhen
+        b = Input(true)
+        n = Input(1)
+        dw = dropwhen(b, 0, n)
+        @fact dw.value => 0
+        push!(n, 2)
+        @fact dw.value => 0
+        push!(b, false)
+        @fact dw.value => 0
+        push!(n, 1)
+        @fact dw.value => 1
+        push!(n, 2)
+        @fact dw.value => 2
+        dw = dropwhen(b, 0, n)
+        @fact dw.value => 2
+    end
+end

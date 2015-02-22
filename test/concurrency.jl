@@ -7,6 +7,7 @@ function crash(x)
     push!(a, 1)
 end
 
-b = lift(crash, a)
-# don't specify exception type, to remain compatible with 0.2
-@test_throws ErrorException push!(a, 1)
+facts("push! inside push!") do
+    b = lift(crash, a)
+    @fact_throws push!(a, 1)
+end
