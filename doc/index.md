@@ -163,7 +163,7 @@ votes   = Input(:NoVote)    # We use :NoVote to denote the initial case
 total   = foldl((acc, vote) -> acc + 1, 0, votes) # Count all votes
 alice   = foldl((acc, vote) -> acc + (vote == :Alice), 0, votes)
 bob     = foldl((acc, vote) -> acc + (vote == :Bob),   0, votes)
-leading = lift((a, b) -> if a > b ? :Alice : a < b ? :Bob : :Tie, alice, bob)
+leading = lift((a, b) -> a > b ? :Alice : a < b ? :Bob : :Tie, alice, bob)
 ```
 
 Maintaining a difference between two updates is a bit more involved. To find the difference between previous and current value of a signal, you'd do:
