@@ -4,7 +4,7 @@ using Base.Order
 using Base.Collections
 
 export SignalSource, Signal, Input, Node, signal, value, lift, @lift, map, foldl,
-       flatten, foldr, merge, filter, dropif, droprepeats, dropwhen,
+       flatten, switch, foldr, merge, filter, dropif, droprepeats, dropwhen,
        sampleon, prev, keepwhen, ⟿
 
 import Base: eltype, join_eltype, convert, push!, merge, map, show, writemime, filter
@@ -432,6 +432,18 @@ end
 #
 flatten(ss::Signal; typ=eltype(value(ss))) =
     Flatten{typ}(ss)
+
+#
+# `switch(f, switcher)` is the same as `flatten(lift(f, switcher))`
+#
+# Args:
+#    f: A function from `T` to `Signal`
+#    switcher: A signal of type `T`
+# Returns:
+#    A flattened signal
+#
+switch(f, switcher) =
+    lift(f, switcher) |> flatten
 
 function writemime{T}(io::IO, m::MIME"text/plain", node::Signal{T})
     writemime(io, m, node.value)
