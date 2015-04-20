@@ -1,5 +1,6 @@
 module Reactive
 
+using Compat
 using Base.Order
 using Base.Collections
 
@@ -30,7 +31,7 @@ eltype{T}(::Signal{T}) = T
 
 # A topological order
 begin
-    local counter = uint(0)
+    local counter = @compat UInt(0)
 
     function next_rank()
         counter += 1
@@ -60,7 +61,8 @@ Input{T}(v::T) = Input{T}(v)
 # in this library that return signals.
 abstract Node{T} <: Signal{T}
 
-function add_child!(parents::(Signal...), child::Signal)
+#function add_child!(parents::Tuple{Vararg{Signal}}, child::Signal)
+function add_child!(parents::@compat(Tuple{Vararg{Signal}}), child::Signal)
     for p in parents
         push!(p.children, child)
     end
@@ -71,7 +73,7 @@ type Lift{T} <: Node{T}
     rank::Uint
     children::Vector{Signal}
     f::Callable
-    signals::(Signal...)
+    signals::@compat Tuple{Vararg{Signal}}
     value::T
 
     function Lift(f::Callable, signals, init)
@@ -160,10 +162,10 @@ end
 type Merge{T} <: Node{T}
     rank::Uint
     children::Vector{Signal}
-    signals::(Signal...)
+    signals::@compat Tuple{Vararg{Signal}}
     ranks::Dict{Signal, Int}
     value::T
-    function Merge(signals::(Signal...))
+    function Merge(signals::@compat Tuple{Vararg{Signal}})
         if length(signals) < 1
             error("Merge requires at least one as argument.")
         end
