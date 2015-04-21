@@ -60,7 +60,7 @@ The `lift` operator can be used to transform one signal into another.
 xsquared = lift(a -> a*a, Int, x)
 typeof(xsquared)
 # => Lift{Int64}
-super(Lift{Int64})
+super(Reactive.Lift{Int64})
 # => Signal{Int64}
 xsquared.value
 # => 4
