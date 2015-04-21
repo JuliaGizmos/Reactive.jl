@@ -1,6 +1,6 @@
 # Reactive
 
-[![Build Status](https://travis-ci.org/JuliaLang/Reactive.jl.png)](https://travis-ci.org/shashi/Reactive.jl)
+[![Build Status](https://travis-ci.org/JuliaLang/Reactive.jl.png)](https://travis-ci.org/JuliaLang/Reactive.jl)
 [![PkgEval](http://pkg.julialang.org/badges/Reactive_release.svg)](http://pkg.julialang.org/?pkg=Reactive&ver=0.3)
 
 Reactive.jl is a package for reactive programming in Julia.
