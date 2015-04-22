@@ -15,19 +15,33 @@ function sub_val(ex::Expr, m::Module)
     elseif ex.head == :kw
         ex.args[2] = sub_val(ex.args[2], m)
     end
+
+    # This bit is required for things like sampleon(x, y) to be
+    # turned into a single signal first and then used as input
+    # to the expression being lifted.
+    if ex.head == :call
+        try
+            eval(m, ex)
+        catch MethodError e
+            return ex
+        end
+    else
+        return ex
+    end
 end
 
 function extract_signals!(ex, m::Module, dict::Dict{Any, Symbol})
-    return ex
-end
-function extract_signals!(ex::SignalSource, m::Module, dict::Dict{Any, Symbol})
-   if haskey(dict, signal(ex))
-       return dict[signal(ex)]
-   else
-       sym = gensym()
-       dict[signal(ex)] = sym
-       return sym
-   end
+    if applicable(signal, ex)
+       if haskey(dict, signal(ex))
+           return dict[signal(ex)]
+       else
+           sym = gensym()
+           dict[signal(ex)] = sym
+           return sym
+       end
+    else
+        return ex
+    end
 end
 
 function extract_signals!(ex::Expr, m::Module, dict::Dict{Any, Symbol})

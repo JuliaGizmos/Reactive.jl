@@ -1,31 +1,33 @@
 using Reactive
 using FactCheck
+using Compat
 
+a = Input(2)
+b = @lift a^2
 facts("@lift") do
-    a = Input(1)
-    b = @lift a^2
-    context("@lift basics") do
-        @fact a.value^2 => b.value
 
-        push!(a, 2)
+    context("@lift input expressions") do
 
-        @fact a.value^2 => b.value
-    end
+        t1 = @lift (a,)
+        t2 = @lift (a, b)
+        l1 = @lift [a]
+        l2 = @lift [a, b^2]
+        c1 = @lift {a}
 
-    t1 = @lift (a,)
-    t2 = @lift (a, b)
-    l1 = @lift [a]
-    l2 = @lift [a, b^2]
-    c1 = @lift {a}
+        push!(a, 3)
 
-    push!(a, 3)
-
-    context("@lift evaluation") do
         @fact t1.value => (a.value,)
         @fact t2.value => (a.value, b.value)
         @fact l1.value => [a.value]
         @fact l2.value => [a.value, b.value^2]
         @fact c1.value =>  {a.value}
+    end
+    context("@lift basics") do
+        @fact value(a)^2 => value(b)
+
+        push!(a, 3)
+
+        @fact a.value^2 => b.value
     end
 
     # test use in a function
@@ -34,7 +36,7 @@ facts("@lift") do
         f(a,b) = @lift a + b + 1 + k
 
         z = f(a,b)
-        push!(a, 3)
+        push!(a, 4)
         @fact a.value^2 + a.value + 4 => z.value
     end
 
