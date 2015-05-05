@@ -11,7 +11,7 @@ facts("@lift") do
         t1 = @lift (a,)
         t2 = @lift (a, b)
         l1 = @lift [a]
-        l2 = @lift [a, b^2]
+        l2 = @lift [a, b]
         c1 = @lift {a}
 
         push!(a, 3)
@@ -19,7 +19,7 @@ facts("@lift") do
         @fact t1.value => (a.value,)
         @fact t2.value => (a.value, b.value)
         @fact l1.value => [a.value]
-        @fact l2.value => [a.value, b.value^2]
+        @fact l2.value => [a.value, b.value]
         @fact c1.value =>  {a.value}
     end
     context("@lift basics") do

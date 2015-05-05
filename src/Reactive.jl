@@ -260,7 +260,7 @@ begin
                 isupdating = true
                 input.value = convert(T, val)
 
-                heap = (Signal, Signal)[] # a min-heap of (child, parent)
+                heap = Any[] # a min-heap of (child, parent)
                 child_rank(x) = rank(x[1])
                 ord = By(child_rank)  # ordered topologically by child.rank
 
