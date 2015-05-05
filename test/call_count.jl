@@ -7,10 +7,10 @@ facts("Call counting") do
     a = Input(0)
     b = Input(0)
 
-    c = lift(+, Int, a, b)
+    c = lift(+, a, b)
     d = merge(a, b)
-    e = lift(+, Int, a, lift(x->2x, Int, a)) # Both depend on a
-    f = lift(+, Int, a, b, c, e)
+    e = lift(+, a, lift(x->2x, a)) # Both depend on a
+    f = lift(+, a, b, c, e)
 
     count = s -> foldl((x, y) -> x+1, 0, s)
 

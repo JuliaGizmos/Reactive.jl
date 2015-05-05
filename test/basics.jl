@@ -29,7 +29,7 @@ facts("Basic checks") do
         @fact b.value => a.value*a.value
 
         ## Multiple inputs to Lift
-        c = lift(+, Int, a, b)
+        c = lift(+, a, b, typ=Int)
         @fact c.value => a.value + b.value
 
         push!(a, number())
