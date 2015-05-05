@@ -1,7 +1,8 @@
 using FactCheck
 using Reactive
+using Compat
 
-number() = int(rand()*1000)
+number() = round(Int, rand()*1000)
 
 
 ## Basics
@@ -59,7 +60,7 @@ facts("Basic checks") do
         ## foldl over time
         push!(a, 0)
         f = foldl(+, 0, a)
-        nums = int(rand(100)*1000)
+        nums = round(Int, rand(100)*1000)
         map(x -> push!(a, x), nums)
 
         @fact sum(nums) => f.value

@@ -69,7 +69,7 @@ function add_child!(parents::@compat(Tuple{Vararg{Signal}}), child::Signal)
 end
 add_child!(parent::Signal, child::Signal) = push!(parent.children, child)
 
-function remove_child!(parents::(Signal...), child::Signal)
+function remove_child!(parents::(@compat Tuple{Vararg{Signal}}), child::Signal)
     for p in parents
         p.children = p.children[find(p.children .!= child)]
     end
@@ -256,7 +256,7 @@ begin
                 isupdating = true
                 input.value = convert(T, val)
 
-                heap = (Signal, Signal)[] # a min-heap of (child, parent)
+                heap = (@compat Tuple{Signal, Signal})[] # a min-heap of (child, parent)
                 child_rank(x) = rank(x[1])
                 ord = By(child_rank)  # ordered topologically by child.rank
 
