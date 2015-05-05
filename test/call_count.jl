@@ -1,7 +1,8 @@
 using FactCheck
 using Reactive
+using Compat
 
-number() = int(rand()*100)
+number() = round(Int, rand()*100)
 
 facts("Call counting") do
     a = Input(0)

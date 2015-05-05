@@ -12,7 +12,7 @@ facts("@lift") do
         t2 = @lift (a, b)
         l1 = @lift [a]
         l2 = @lift [a, b]
-        c1 = @lift {a}
+        c1 = @lift Any[a]
 
         push!(a, 3)
 
@@ -20,7 +20,7 @@ facts("@lift") do
         @fact t2.value => (a.value, b.value)
         @fact l1.value => [a.value]
         @fact l2.value => [a.value, b.value]
-        @fact c1.value =>  {a.value}
+        @fact c1.value => Any[a.value]
     end
     context("@lift basics") do
         @fact value(a)^2 => value(b)

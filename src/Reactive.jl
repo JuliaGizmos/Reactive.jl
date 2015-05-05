@@ -69,7 +69,7 @@ function add_child!(parents::@compat(Tuple{Vararg{Signal}}), child::Signal)
 end
 add_child!(parent::Signal, child::Signal) = push!(parent.children, child)
 
-function remove_child!(parents::(Signal...), child::Signal)
+function remove_child!(parents::(@compat Tuple{Vararg{Signal}}), child::Signal)
     for p in parents
         p.children = p.children[find(p.children .!= child)]
     end
