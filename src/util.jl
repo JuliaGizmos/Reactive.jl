@@ -29,5 +29,5 @@ dropif(pred::Function, v0, s::SignalSource) = filter(x->!pred(x), v0, s)
 # Returns:
 #     a signal which updates only when the test signal is true
 function keepwhen(test::Signal{Bool}, v0, s::SignalSource)
-    dropwhen(lift(!, Bool, test), v0, s)
+    dropwhen(lift(!,  test), v0, s)
 end
