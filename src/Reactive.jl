@@ -5,7 +5,7 @@ using Base.Order
 using Base.Collections
 
 export SignalSource, Signal, Input, Node, signal, value, lift, @lift, map, foldl,
-       foldr, merge, filter, dropif, droprepeats, dropwhen,
+       flatten, switch, foldr, merge, filter, dropif, droprepeats, dropwhen,
        sampleon, prev, keepwhen, ⟿
 
 import Base: eltype, join_eltype, convert, push!, merge, map, show, writemime, filter
@@ -68,6 +68,14 @@ function add_child!(parents::@compat(Tuple{Vararg{Signal}}), child::Signal)
     end
 end
 add_child!(parent::Signal, child::Signal) = push!(parent.children, child)
+
+function remove_child!(parents::(@compat Tuple{Vararg{Signal}}), child::Signal)
+    for p in parents
+        p.children = p.children[find(p.children .!= child)]
+    end
+end
+remove_child!(parent::Signal, child::Signal) =
+    remove_child!((parent,), child)
 
 type Lift{T} <: Node{T}
     rank::Uint
@@ -203,6 +211,37 @@ function update(node::SampleOn, parent)
     return true
 end
 
+deepvalue(s::Signal) = value(s)
+deepvalue{T <: Signal}(s::Signal{T}) = deepvalue(value(s))
+
+type Flatten{T} <: Node{T}
+    rank::Uint
+    children::Vector{Signal}
+    value::T
+    function Flatten(signalsignal::Signal)
+        @assert isa(value(signalsignal), Signal)
+        node = new(next_rank(), Signal[], value(value(signalsignal)))
+
+        firstsig = value(signalsignal)
+        add_child!(signalsignal, node)
+
+        foldl(begin add_child!(firstsig, node); firstsig end, signalsignal; typ=Any) do prev, next
+            remove_child!(prev, node)
+            add_child!(next, node)
+            next
+        end
+
+        return node
+    end
+end
+
+function update(node::Flatten, parent)
+    # Note: node depends on 1) the signal of signals 2) the current signal
+    # so deepvalue actually has different behavior in these 2 cases.
+    node.value = deepvalue(parent)
+    return true
+end
+
 begin
     local isupdating = false
     # Update the value of an Input signal and propagate the
@@ -220,8 +259,8 @@ begin
             try
                 isupdating = true
                 input.value = convert(T, val)
+                heap = Any[] # a min-heap of (child, parent)
 
-                heap = Tuple{Signal, Signal}[] # a min-heap of (child, parent)
                 child_rank(x) = rank(x[1])
                 ord = By(child_rank)  # ordered topologically by child.rank
 
@@ -265,12 +304,14 @@ begin
                 end
                 isupdating = false
                 return nothing
-            catch e
+            catch ex
                 # FIXME: Rethink this.
                 isupdating = false
+                showerror(STDERR, ex)
+                println(STDERR)
                 Base.show_backtrace(STDERR, catch_backtrace())
-                println(STDERR, "\n")
-                throw(e)
+                println(STDERR)
+                throw(ex)
             end
         end
     end
@@ -283,19 +324,14 @@ end
 #
 # Args:
 #     f: The transformation function
-#     output_type: Output type (optional)
 #     inputs...: Signals to apply `f` to. Same number as the arity of `f`.
+#     init: (kwarg) - the initial value, defaults to `f(values of inputs...)`
+#     typ: (kwarg) - the output type, defaults to typeof(init)
 # Returns:
 #     a signal which updates when an argument signal updates.
 
-lift(f::Callable, inputs::Signal...; init=f(map(value, inputs)...)) =
-    Lift{typeof(init)}(f, inputs, init)
-
-lift(f::Callable, output_type::Type, inputs::Signal...; init=f(map(value, inputs)...)) =
-    Lift{output_type}(f, inputs, init)
-
-lift(f::Callable, output_type::Type, inputs::SignalSource...; kwargs...) =
-    lift(f, output_type, map(signal, inputs)...; kwargs...)
+lift(f::Callable, inputs::Signal...; init=f(map(value, inputs)...), typ=typeof(init)) =
+    Lift{typ}(f, inputs, init)
 
 lift(f::Callable, inputs::SignalSource...; kwargs...) =
     lift(f, map(signal, inputs)...; kwargs...)
@@ -320,16 +356,16 @@ lift(f::Callable, inputs::SignalSource...; kwargs...) =
 #     signals: as many signals as one less than the arity of f.
 # Returns:
 #     A signal which updates when one of the argument signals update.
-function foldl{T}(f, v0::T, signal::SignalSource, signals::SignalSource...; output_type=T)
+function foldl{T}(f, v0::T, signal::SignalSource, signals::SignalSource...; typ=T)
     local a = v0
     lift((b...) -> a = f(a, b...),
-        output_type, signal, signals...; init=v0)
+        signal, signals...; init=v0, typ=typ)
 end
 
-function foldr{T}(f::Function, v0::T, signal::SignalSource, signals::SignalSource...; output_type=T)
+function foldr{T}(f::Function, v0::T, signal::SignalSource, signals::SignalSource...; typ=T)
     local a = v0
     lift((b...) -> a = f(b..., a),
-        output_type, signal, signals...; init=v0)
+        signal, signals...; init=v0, typ=typ)
 end
 
 # Keep only updates that return true when applied to a predicate function.
@@ -387,10 +423,32 @@ function show{T}(io::IO, node::Signal{T})
     write(io, string("[$(typeof(node))] ", node.value))
 end
 
+#
+# Flatten a signal of signal into a signal
+#
+# Args:
+#    ss: the signal of signals
+# Returns:
+#    A signal
+#
+flatten(ss::Signal; typ=eltype(value(ss))) =
+    Flatten{typ}(ss)
+
+#
+# `switch(f, switcher)` is the same as `flatten(lift(f, switcher))`
+#
+# Args:
+#    f: A function from `T` to `Signal`
+#    switcher: A signal of type `T`
+# Returns:
+#    A flattened signal
+#
+switch(f, switcher; typ=eltype(switcher)) =
+    flatten(lift(f, switcher), typ=typ)
+
 function writemime{T}(io::IO, m::MIME"text/plain", node::Signal{T})
     writemime(io, m, node.value)
 end
-
 
 include("macros.jl")
 include("timing.jl")
