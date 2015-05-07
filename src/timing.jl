@@ -11,7 +11,7 @@ function every(delta::Float64)
     update(timer) = push!(i, time())
     t = Timer(update)
     start_timer(t, delta, delta)
-    return lift(x->x, Float64, i) # prevent push!
+    return lift(x->x, i, typ=Float64) # prevent push!
 end
 
 # Same as the fps function, but you can turn it on and off.
@@ -46,7 +46,7 @@ function fpswhen(test::Signal{Bool}, freq)
         return t
     end
 
-    return lift(gate, Float64, test, diff)
+    return lift(gate, test, diff, typ=Float64)
 end
 fpswhen(test, freq) = fpswhen(signal(test), freq)
 
@@ -69,7 +69,7 @@ end
 #     a signal of type (Float64, T) where the first element is the time
 #     at which the value (2nd element) got updated.
 function timestamp{T}(s::Signal{T})
-    return lift(x -> (time(), x), (Float64, T), s)
+    return lift(x -> (time(), x), s, typ=@compat Tuple{Float64, T})
 end
 taimestamp(s) = timestamp(signal(s))
 
