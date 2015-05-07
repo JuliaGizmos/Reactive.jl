@@ -4,7 +4,7 @@ using Compat
 using Base.Order
 using Base.Collections
 
-export SignalSource, Signal, Input, Node, signal, value, lift, @lift, map, foldl,
+export SignalSource, Signal, Input, Node, signal, value, lift, @lift, trylift, map, foldl,
        flatten, switch, foldr, merge, filter, dropif, droprepeats, dropwhen,
        sampleon, prev, keepwhen, ⟿
 
@@ -335,6 +335,19 @@ lift(f::Callable, inputs::Signal...; init=f(map(value, inputs)...), typ=typeof(i
 
 lift(f::Callable, inputs::SignalSource...; kwargs...) =
     lift(f, map(signal, inputs)...; kwargs...)
+
+typealias Try{T} Union(T, Exception)
+
+wraptrycatch(typ, f) =
+    (a...) -> try
+        convert(typ, f(a...))
+    catch ex
+        ex
+    end
+
+trylift(f::Callable, typ::Type, inputs...;
+        init=wraptrycatch(typ, f)(map(value, inputs)...)) =
+    lift(wraptrycatch(typ, f), inputs...; init=init, typ=Try{typ})
 
 # Uncomment in Julia >= 0.3 to enable cute infix operators.
 #     ⟿(signals::(Any...), f::Callable) = lift(f, signals...)
