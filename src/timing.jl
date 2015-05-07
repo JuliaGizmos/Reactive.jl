@@ -11,7 +11,7 @@ function every(delta::Float64)
     update(timer) = push!(i, time())
     t = Timer(update)
     start_timer(t, delta, delta)
-    return lift(x->x, Float64, i) # prevent push!
+    return lift(x->x,  i) # prevent push!
 end
 
 # Same as the fps function, but you can turn it on and off.
