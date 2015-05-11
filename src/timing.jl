@@ -11,7 +11,7 @@ function every(delta::Float64)
     update(timer) = push!(i, time())
     t = Timer(update)
     start_timer(t, delta, delta)
-    return lift(x->x,  i) # prevent push!
+    return lift(identity,  i) # prevent push!
 end
 
 # Same as the fps function, but you can turn it on and off.
@@ -46,7 +46,7 @@ function fpswhen(test::Signal{Bool}, freq)
         return t
     end
 
-    return lift(gate, Float64, test, diff)
+    return lift(gate, test, diff)
 end
 fpswhen(test, freq) = fpswhen(signal(test), freq)
 
