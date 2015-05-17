@@ -81,7 +81,7 @@ y.value
 # => 12
 ```
 
-**Example: A stupid line-droid**
+**Example: A stupid line-follower bot**
 
 In the examples below we explore how a simple line-follower robot could be programmed with Reactive.
 
@@ -111,8 +111,8 @@ function v_right(sensors)
    sensors[2] - sensors[3]
 end
 
-left_motor  = lift(v_left,  Float64, sensor_input)
-right_motor = lift(v_right, Float64, sensor_input)
+left_motor  = lift(v_left,  sensor_input, typ=Float64)
+right_motor = lift(v_right, sensor_input, typ=Float64)
 ```
 
 The `@lift` macro makes this simpler:
@@ -174,7 +174,7 @@ function difference(prev, x)
     return (x-prev_val, x)
 end
 
-diff = lift(x->x[1], foldl(difference, 0.0, signal))
+diff = lift(x->x[1], foldl(difference, (0.0, 0.0), signal))
 ```
 
 Note that this method has the advantage that all state is explicit. You could accomplish this by using a global variable to store `prev_val`, but that is not recommended.
