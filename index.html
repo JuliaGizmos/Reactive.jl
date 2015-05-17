@@ -18,7 +18,7 @@
     <div class="container">
       <div class="row">
         <ul>
-          <li><div id="pkgname">Reactive 0.1.7+</div></li>
+          <li><div id="pkgname">Reactive 0.2.0+</div></li>
           <li><a href="http://github.com/JuliaLang/Reactive.jl">Code</a></li>
           <li><a href="http://github.com/JuliaLang/Reactive.jl/issues">Issues</a></li>
         </ul>
@@ -33,15 +33,15 @@
 <figure>
 <img src="Star-On-Machine.jpg" />
 </figure>
-<p>Reactive.jl is a Julia package for <a href="http://en.wikipedia.org/Reactive_Programming">Reactive Programming</a>. It makes writing event-driven programs simple.</p>
+<p>Reactive.jl is a Julia package for <a href="https://en.wikipedia.org/wiki/Reactive_programming">Reactive Programming</a>. It makes writing event-driven programs simple.</p>
 <p>Reactive borrows its design from <a href="http://elm-lang.org/">Elm</a> (see also <a href="http://elm-lang.org/learn/What-is-FRP.elm">Functional Reactive Programming</a>).</p>
-<h1 id="getting-started">Getting Started</h1>
+<h1 id="getting-started"><a href="#getting-started">Getting Started</a></h1>
 <p>To install the latest release of Reactive, run the following in the Julia REPL.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">Pkg.add(<span class="st">&quot;Reactive&quot;</span>)</code></pre>
 <p>To start using it, import it:</p>
 <pre class="sourceCode julia julia"><code class="sourceCode julia">using Reactive</code></pre>
-<h1 id="a-tutorial-introduction">A Tutorial Introduction</h1>
-<h2 id="signals">Signals</h2>
+<h1 id="a-tutorial-introduction"><a href="#a-tutorial-introduction">A Tutorial Introduction</a></h1>
+<h2 id="signals"><a href="#signals">Signals</a></h2>
 <!-- the dot language mapping of signal types:
         input: 'hexagon'
         lift: 'invtrapezium'
@@ -65,12 +65,12 @@ x.value
 push!(x, <span class="fl">2</span>)
 x.value
 <span class="co"># =&gt; 2</span></code></pre>
-<h2 id="do-you-even-lift">Do you even lift?</h2>
+<h2 id="do-you-even-lift"><a href="#do-you-even-lift">Do you even lift?</a></h2>
 <p>The <code>lift</code> operator can be used to transform one signal into another.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">xsquared = lift(a -&gt; a*a, <span class="dt">Int</span>, x)
 typeof(xsquared)
 <span class="co"># =&gt; Lift{Int64}</span>
-super(Lift{<span class="dt">Int64</span>})
+super(Reactive.Lift{<span class="dt">Int64</span>})
 <span class="co"># =&gt; Signal{Int64}</span>
 xsquared.value
 <span class="co"># =&gt; 4</span></code></pre>
@@ -83,7 +83,7 @@ xsquared.value
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">y = lift((a, b) -&gt; a + b, <span class="dt">Int</span>, x, xsquared)
 y.value
 <span class="co"># =&gt; 12</span></code></pre>
-<p><strong>Example: A stupid line-droid</strong></p>
+<p><strong>Example: A stupid line-follower bot</strong></p>
 <p>In the examples below we explore how a simple line-follower robot could be programmed with Reactive.</p>
 <p>Here are the specifications of the robot:</p>
 <ol type="1">
@@ -108,8 +108,8 @@ sensor_input = Input([<span class="fl">0.0</span>, <span class="fl">1.0</span>, 
    sensors[<span class="fl">2</span>] - sensors[<span class="fl">3</span>]
 <span class="kw">end</span>
 
-left_motor  = lift(v_left,  <span class="dt">Float64</span>, sensor_input)
-right_motor = lift(v_right, <span class="dt">Float64</span>, sensor_input)</code></pre>
+left_motor  = lift(v_left,  sensor_input, typ=<span class="dt">Float64</span>)
+right_motor = lift(v_right, sensor_input, typ=<span class="dt">Float64</span>)</code></pre>
 <p>The <code>@lift</code> macro makes this simpler:</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">left_motor  = @lift sensor_input[<span class="fl">1</span>] - sensor_input[<span class="fl">3</span>]
 right_motor = @lift sensor_input[<span class="fl">1</span>] - sensor_input[<span class="fl">2</span>]</code></pre>
@@ -120,7 +120,7 @@ right_motor = @lift sensor_input[<span class="fl">1</span>] - sensor_input[<span
 <span class="kw">end</span>
 
 @lift set_voltages(left_motor, right_motor)</code></pre>
-<h2 id="the-event-loop">The Event Loop</h2>
+<h2 id="the-event-loop"><a href="#the-event-loop">The Event Loop</a></h2>
 <p>Finally, we need to set up a loop which reads input from the sensors and plumbs it into the data flow we created above.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">function</span> read_sensors()
     [read(LEFT_SENSOR_PIN),
@@ -135,14 +135,14 @@ right_motor = @lift sensor_input[<span class="fl">1</span>] - sensor_input[<span
     sleep(<span class="fl">0.1</span>)
 <span class="kw">end</span></code></pre>
 <p>See <a href="#timed-signals-and-sampling">Timed signals and sampling</a> for a more elegant way of doing the same!</p>
-<h2 id="maintaining-state">Maintaining State</h2>
+<h2 id="maintaining-state"><a href="#maintaining-state">Maintaining State</a></h2>
 <p><strong>Example: A Voting System</strong> The following examples deal with a voting system in an election. The voters can either vote for Alice, Bob, or cast an invalid vote.</p>
 <p><a href="api.html#foldl"><code>foldl</code></a> can be used to accumulate a value over time. You might count the number of votes like this:</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">votes   = Input(:NoVote)    <span class="co"># We use :NoVote to denote the initial case</span>
 total   = foldl((acc, vote) -&gt; acc + <span class="fl">1</span>, <span class="fl">0</span>, votes) <span class="co"># Count all votes</span>
 alice   = foldl((acc, vote) -&gt; acc + (vote == :Alice), <span class="fl">0</span>, votes)
 bob     = foldl((acc, vote) -&gt; acc + (vote == :Bob),   <span class="fl">0</span>, votes)
-leading = lift((a, b) -&gt; <span class="kw">if</span> a &gt; b ? :Alice : a &lt; b ? :Bob : :Tie, alice, bob)</code></pre>
+leading = lift((a, b) -&gt; a &gt; b ? :Alice : a &lt; b ? :Bob : :Tie, alice, bob)</code></pre>
 <p>Maintaining a difference between two updates is a bit more involved. To find the difference between previous and current value of a signal, you'd do:</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">function</span> difference(prev, x)
     prev_diff, prev_val = prev
@@ -150,9 +150,9 @@ leading = lift((a, b) -&gt; <span class="kw">if</span> a &gt; b ? :Alice : a &lt
     <span class="kw">return</span> (x-prev_val, x)
 <span class="kw">end</span>
 
-diff = lift(x-&gt;x[<span class="fl">1</span>], foldl(difference, <span class="fl">0.0</span>, signal))</code></pre>
+diff = lift(x-&gt;x[<span class="fl">1</span>], foldl(difference, (<span class="fl">0.0</span>, <span class="fl">0.0</span>), signal))</code></pre>
 <p>Note that this method has the advantage that all state is explicit. You could accomplish this by using a global variable to store <code>prev_val</code>, but that is not recommended.</p>
-<h2 id="filter-and-merge">Filter and merge</h2>
+<h2 id="filter-and-merge"><a href="#filter-and-merge">Filter and merge</a></h2>
 <p>The <a href="api.html#filter"><code>filter</code></a> or <a href="api.html#dropif"><code>dropif</code></a> functions can filter a signal based on a predicate function.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># Create a signal of only valid votes</span>
 <span class="co"># If the initial votes are invalid, we use :NoVote</span>
@@ -172,8 +172,8 @@ secure_votes = dropwhen(security_breached, votes)</code></pre>
 <p><code>leading_norepeat</code> only updates when the leading candidate changes.</p>
 <p>Finally,</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">lift(show_on_TV, alice, bob, stats)</code></pre>
-<h2 id="timed-signals-and-sampling">Timed signals and sampling</h2>
-<p>The <a href="api.html#timing"><code>Reactive.Timing</code></a> module contains some functions to create timed signals. <a href="api.html#every"><code>every</code></a> can be used to create a signal that updates at a certain interval.</p>
+<h2 id="timed-signals-and-sampling"><a href="#timed-signals-and-sampling">Timed signals and sampling</a></h2>
+<p>Reactive provides functions to create timed signals. <a href="api.html#every"><code>every</code></a> can be used to create a signal that updates at a certain interval.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
 
 every10secs = every(<span class="fl">10.0</span>)</code></pre>
@@ -200,7 +200,7 @@ sensor_input = lift(read_sensors, fpswhen(circuit_not_complete, <span class="fl"
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
 timestamped_votes = timestamp(votes)</code></pre>
 <p><code>timestamped_votes</code> is a signal of <code>(timestamp, vote)</code> where <code>timestamp</code> is a <code>Float64</code> timestamp denoting when the <code>vote</code> came in.</p>
-<h1 id="possible-uses">Possible uses</h1>
+<h1 id="possible-uses"><a href="#possible-uses">Possible uses</a></h1>
 <p>I am currently using Reactive to build interactive widgets on <a href="http://github.com/JuliaLang/IJulia.jl">IJulia</a>. Reactive is aimed at making event-driven programming simple. You could use Reactive to build:</p>
 <ul>
 <li>Interactive user interfaces (watch out for <a href="https://github.com/shashi/Interact.jl">Interact.jl</a>)</li>
@@ -208,7 +208,7 @@ timestamped_votes = timestamp(votes)</code></pre>
 <li>Robotics and automation</li>
 <li>Queueing systems and service-oriented apps</li>
 </ul>
-<h1 id="reporting-bugs">Reporting Bugs</h1>
+<h1 id="reporting-bugs"><a href="#reporting-bugs">Reporting Bugs</a></h1>
 <p>Let me know about any bugs, counterintuitive behavior, or enhancements you'd like by <a href="https://github.com/shashi/Reactive.jl/issues/new">filing a bug</a> on github.</p>
         <hr>
       </div>
@@ -274,7 +274,7 @@ timestamped_votes = timestamp(votes)</code></pre>
     </div>
 
   <footer class="col-sm-8">
-    <p class="muted">Last modified by Shashi Gowda on Thu Aug 28 22:19:02 IST 2014. Generated with
+    <p class="muted">Last modified by Shashi Gowda on Sun May 17 10:36:03 IST 2015. Generated with
     <a href="https://github.com/dcjones/Judo.jl">Judo</a>.</p>
   </footer>
 

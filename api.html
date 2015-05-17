@@ -18,7 +18,7 @@
     <div class="container">
       <div class="row">
         <ul>
-          <li><div id="pkgname">Reactive 0.1.7+</div></li>
+          <li><div id="pkgname">Reactive 0.2.0+</div></li>
           <li><a href="http://github.com/JuliaLang/Reactive.jl">Code</a></li>
           <li><a href="http://github.com/JuliaLang/Reactive.jl/issues">Issues</a></li>
         </ul>
@@ -30,40 +30,29 @@
     <div class="row">
       <div class="col-sm-7">
       <div id="body-content">
-<h1 id="signals">Signals</h1>
-<h2 id="signalt">Signal{T}</h2>
+<h1 id="signals"><a href="#signals">Signals</a></h1>
+<h2 id="signalt"><a href="#signalt">Signal{T}</a></h2>
 <div class="api-doc">
-A <code>Signal{T}</code> is a time-varying value of type T.
+A <code>Signal{T}</code> is a time-varying value of type T. Signal itself is a subtype of SignalSource for easy dispatch (e.g. see foldl below)
 </div>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">abstract</span> Signal{T}</code></pre>
-<h2 id="inputt">Input{T}</h2>
+<h2 id="inputt"><a href="#inputt">Input{T}</a></h2>
 <div class="api-doc">
 An <code>Input</code> is a signal which can be updated explicitly by code external to Reactive. All other signal types have implicit update logic. <code>Input</code> signals can be updated by a call to <code>push!</code>. An <code>Input</code> must be created with an initial value.
 </div>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">type</span> Input{T} &lt;: Signal{T} ... <span class="kw">end</span>
 i = Input(<span class="fl">0</span>)    <span class="co"># Construct an input signal of integers with the default value 0</span></code></pre>
-<h2 id="nodet">Node{T}</h2>
+<h2 id="nodet"><a href="#nodet">Node{T}</a></h2>
 <div class="api-doc">
 An intermediate node. A <code>Node</code> can be created by functions in this library that return signals.
 </div>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">abstract</span> Node{T} &lt;: Signal{T}</code></pre>
-<h1 id="transforming-signals">Transforming signals</h1>
-<h2 id="lift">lift</h2>
-<div class="api-doc">
-<p>The <code>lift</code> operator can be used to create a new signal from existing signals. The value of the new signal will be the return value of a function <code>f</code> applied to the current values of the input signals.</p>
-<h4>Args</h4>
-<ul>
-<li><code>f</code>: The transformation function</li>
-<li><code>output_type</code>: Output type (optional)</li>
-<li><code>inputs...</code>: Signals to apply <code>f</code> to. Same number as the arity of <code>f</code>.</li>
-</ul>
-<h4>Returns</h4>
-a signal which updates when an argument signal updates.
-</div>
-<h3 id="lift-1"><span class="citation" data-cites="lift">@lift</span></h3>
+<h1 id="transforming-signals"><a href="#transforming-signals">Transforming signals</a></h1>
+<h2 id="lift"><a href="#lift">lift</a></h2>
+<h3 id="lift-1"><a href="#lift-1"><span class="citation" data-cites="lift">@lift</span></a></h3>
 <div class="api-doc">
 <p>Convenience macro for calling <code>lift</code>. Evaluates an expression looking for signal values, and returns a signal whose values are that of the expression as the signals in it change.</p>
-<h4>Args</h4>
+<h4><a href="#args">Args</a></h4>
 <ul>
 <li><code>expr</code>: Expression</li>
 </ul>
@@ -78,141 +67,139 @@ a signal which updates when an argument signal updates.
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
 z = @lift (x, <span class="fl">2</span>y, x*y)
 <span class="co"># z is now a Signal{Tuple}</span></code></pre>
-<h1 id="state">State</h1>
-<h2 id="foldl">foldl</h2>
+<h1 id="state"><a href="#state">State</a></h1>
+<h2 id="foldl"><a href="#foldl">foldl</a></h2>
 <div class="api-doc">
 <p><a href="http://en.wikipedia.org/wiki/Fold_(higher-order_function)">Fold</a> over time. foldl can be used to reduce a signal updates to a signal of an accumulated value.</p>
-<h4>Args</h4>
+<h4><a href="#args-1">Args</a></h4>
 <ul>
 <li><p><code>f</code>: A function that takes its previously returned value as the first argument and the values of the signals as the second argument</p></li>
 <li><code>v0</code>: initial value of the fold</li>
 <li><p><code>signals</code>: as many signals as one less than the arity of f.</p></li>
 </ul>
-<h4>Returns</h4>
+<h4><a href="#returns">Returns</a></h4>
 A signal which updates when one of the argument signals update.
 </div>
-<h2 id="foldr">foldr</h2>
-<h1 id="filters-and-gates">Filters and Gates</h1>
-<h2 id="filter">filter</h2>
+<h2 id="foldr"><a href="#foldr">foldr</a></h2>
+<h1 id="filters-and-gates"><a href="#filters-and-gates">Filters and Gates</a></h1>
+<h2 id="filter"><a href="#filter">filter</a></h2>
 <div class="api-doc">
 <p>Keep only updates that return true when applied to a predicate function.</p>
-<h4>Args</h4>
+<h4><a href="#args-2">Args</a></h4>
 <ul>
 <li><code>pred</code>: a function of type that returns a boolean value</li>
 <li><code>v0</code>: the value the signal should take if the predicate is not satisfied initially.</li>
 <li><code>s</code>: the signal to be filtered</li>
 </ul>
-<h4>Returns</h4>
+<h4><a href="#returns-1">Returns</a></h4>
 A filtered signal
 </div>
-<h2 id="dropif">dropif</h2>
+<h2 id="dropif"><a href="#dropif">dropif</a></h2>
 <div class="api-doc">
 <p>Drop updates if the predicate is true. Complement of filter.</p>
-<h4>Args</h4>
+<h4><a href="#args-3">Args</a></h4>
 <ul>
 <li><code>pred</code>: a predicate function</li>
 <li><code>v0</code>: base value to be used if the predicate is satisfied initially</li>
 <li><code>s</code>: the signal to drop updates on</li>
 </ul>
-<h4>Returns</h4>
+<h4><a href="#returns-2">Returns</a></h4>
 a filtered signal
 </div>
-<h2 id="droprepeats">droprepeats</h2>
+<h2 id="droprepeats"><a href="#droprepeats">droprepeats</a></h2>
 <div class="api-doc">
 <p>Drop repeated updates. To be used on signals of immutable types.</p>
-<h4>Args</h4>
+<h4><a href="#args-4">Args</a></h4>
 <ul>
 <li><code>s</code>: the signal to drop repeats from</li>
 </ul>
-<h4>Returns</h4>
+<h4><a href="#returns-3">Returns</a></h4>
 a signal with repeats dropped.
 </div>
-<h2 id="keepwhen">keepwhen</h2>
+<h2 id="keepwhen"><a href="#keepwhen">keepwhen</a></h2>
 <div class="api-doc">
 <p>Keep only updates to the second signal only when the first signal is true. Complements dropwhen.</p>
-<h4>Args</h4>
+<h4><a href="#args-5">Args</a></h4>
 <ul>
 <li><code>test</code>: a Signal{Bool} which tells when to keep updates to s</li>
 <li><code>v0</code>: base value to use if the signal is false initially</li>
 <li><code>s</code>: the signal to filter</li>
 </ul>
-<h4>Returns</h4>
+<h4><a href="#returns-4">Returns</a></h4>
 a signal which updates only when the test signal is true
 </div>
-<h2 id="dropwhen">dropwhen</h2>
+<h2 id="dropwhen"><a href="#dropwhen">dropwhen</a></h2>
 <div class="api-doc">
 <p>Drop updates when the first signal is true.</p>
-<h4>Args</h4>
+<h4><a href="#args-6">Args</a></h4>
 <ul>
 <li><code>test</code>: a Signal{Bool} which tells when to drop updates</li>
 <li><code>v0</code>: value to be used if the test signal is true initially</li>
 <li><code>s</code>: the signal to drop updates from</li>
 </ul>
 </div>
-<h1 id="sample-and-merge">Sample and Merge</h1>
-<h2 id="sampleon">sampleon</h2>
+<h1 id="sample-and-merge"><a href="#sample-and-merge">Sample and Merge</a></h1>
+<h2 id="sampleon"><a href="#sampleon">sampleon</a></h2>
 <div class="api-doc">
 <p>Sample from the second signal every time an update occurs in the first signal</p>
-<h4>Args</h4>
+<h4><a href="#args-7">Args</a></h4>
 <ul>
 <li><code>s1</code>: the signal to watch for updates</li>
 <li><code>s2</code>: the signal to sample from when s1 updates</li>
 </ul>
-<h4>Returns</h4>
+<h4><a href="#returns-5">Returns</a></h4>
 a of the same type as s2 which updates with s1
 </div>
-<h2 id="merge">merge</h2>
+<h2 id="merge"><a href="#merge">merge</a></h2>
 <div class="api-doc">
 <p>Merge multiple signals of the same type. If more than one signals update together, the first one gets precedence.</p>
-<h4>Args</h4>
+<h4><a href="#args-8">Args</a></h4>
 <ul>
 <li><code>signals...</code>: two or more signals</li>
 </ul>
-<h4>Returns</h4>
+<h4><a href="#returns-6">Returns</a></h4>
 a merged signal
 </div>
-<h1 id="timing">Timing</h1>
-<p>Timing functions are available in the Reactive.Timing module:</p>
-<pre class="sourceCode julia julia"><code class="sourceCode julia">using Reactive.Timing</code></pre>
-<h2 id="fps">fps</h2>
+<h1 id="timed-signals"><a href="#timed-signals">Timed Signals</a></h1>
+<h2 id="fps"><a href="#fps">fps</a></h2>
 <div class="api-doc">
 <p>Takes a desired number of frames per second and updates as quickly as possible at most the desired number of times a second.</p>
-<h4>Args</h4>
+<h4><a href="#args-9">Args</a></h4>
 <ul>
 <li><code>freq</code>: the desired fps</li>
 </ul>
-<h4>Returns</h4>
+<h4><a href="#returns-7">Returns</a></h4>
 a signal of time delta between two updates
 </div>
-<h2 id="fpswhen">fpswhen</h2>
+<h2 id="fpswhen"><a href="#fpswhen">fpswhen</a></h2>
 <div class="api-doc">
 <p>Same as the fps function, but you can turn it on and off. The first time delta after a pause is always zero, no matter how long the pause was.</p>
-<h4>Args</h4>
+<h4><a href="#args-10">Args</a></h4>
 <ul>
 <li><code>test</code>: a switch signal of booleans to turn fps on or off</li>
 <li><code>freq</code>: the maximum frequency at which fpswhen should update</li>
 </ul>
-<h4>Returns</h4>
+<h4><a href="#returns-8">Returns</a></h4>
 an signal of Float64 time deltas
 </div>
-<h2 id="every">every</h2>
+<h2 id="every"><a href="#every">every</a></h2>
 <div class="api-doc">
 <p>Create a signal of timestamps that updates every delta seconds</p>
-<h4>Args</h4>
+<h4><a href="#args-11">Args</a></h4>
 <ul>
 <li><code>delta</code>: interval between updates.</li>
 </ul>
-<h4>Returns</h4>
+<h4><a href="#returns-9">Returns</a></h4>
 a periodically updating timestamp as a signal
 </div>
-<h2 id="timestamp">timestamp</h2>
+<h2 id="timestamp"><a href="#timestamp">timestamp</a></h2>
 <div class="api-doc">
 <p>Timestamp a signal.</p>
-<h4>Args</h4>
+<h4><a href="#args-12">Args</a></h4>
 <ul>
 <li><code>s</code>: a signal to timestamp</li>
 </ul>
-<h4>Returns</h4>
+<h4><a href="#returns-10">Returns</a></h4>
 a signal of type (Float64, T) where the first element is the time at which the value (2nd element) got updated.
 </div>
         <hr>
@@ -284,7 +271,7 @@ a signal of type (Float64, T) where the first element is the time at which the v
                 <a style="margin-left: 1.0em" class="toc-item" href="#merge">merge</a>
             </li>
             <li>
-                <a style="margin-left: 0.5em" class="toc-item" href="#timing">Timing</a>
+                <a style="margin-left: 0.5em" class="toc-item" href="#timed-signals">Timed Signals</a>
             </li>
             <li>
                 <a style="margin-left: 1.0em" class="toc-item" href="#fps">fps</a>
@@ -318,7 +305,7 @@ a signal of type (Float64, T) where the first element is the time at which the v
     </div>
 
   <footer class="col-sm-8">
-    <p class="muted">Last modified by Shashi Gowda on Thu Aug 28 22:19:02 IST 2014. Generated with
+    <p class="muted">Last modified by Shashi Gowda on Sun May 17 10:36:03 IST 2015. Generated with
     <a href="https://github.com/dcjones/Judo.jl">Judo</a>.</p>
   </footer>
 
