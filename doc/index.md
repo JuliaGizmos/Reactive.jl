@@ -57,10 +57,12 @@ x.value
 The `lift` operator can be used to transform one signal into another.
 
 ```{.julia execute="false"}
-xsquared = lift(a -> a*a, Int, x)
+xsquared = lift(a -> a*a, x)
 typeof(xsquared)
 # => Lift{Int64}
 super(Reactive.Lift{Int64})
+# => Node{Int64}
+super(super(Reactive.Lift{Int64}))
 # => Signal{Int64}
 xsquared.value
 # => 4
@@ -76,7 +78,7 @@ xsquared.value
 ```
 `lift` can take more than one signal as argument.
 ```{.julia execute="false"}
-y = lift((a, b) -> a + b, Int, x, xsquared)
+y = lift((a, b) -> a + b, x, xsquared; typ = Int)
 y.value
 # => 12
 ```
