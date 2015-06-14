@@ -9,8 +9,7 @@ export every, fpswhen, fps, timestamp
 function every(delta::Float64)
     i = Input(time())
     update(timer) = push!(i, time())
-    t = Timer(update)
-    start_timer(t, delta, delta)
+    t = Timer(update, delta, delta)
     return lift(identity,  i) # prevent push!
 end
 
@@ -22,31 +21,20 @@ end
 #     freq: the maximum frequency at which fpswhen should update
 # Returns:
 #     an signal of Float64 time deltas
+function gate(wason_timer::Tuple{Bool, Timer}, ison::Bool, s::Input{Float64}, delta::Float64)
+    wason, timer = wason_timer
+    (!wason&&ison) && return (ison, Timer(x->push!(s, time()), 0, delta)) # start pushing again
+    (wason&&!ison) && (close(timer); return (ison, timer)) # stop it now!
+    (ison, timer)
+end
 function fpswhen(test::Signal{Bool}, freq)
-    diff = Input(0.0)
-
-    local delta = 1/freq, t0 = time(),
-          isOn = test.value, wasOn = false
-
-    function update(timer)
-        t = time()
-        push!(diff, t-t0)
-        t0 = t
-    end
-
-    local timer = Timer(update)
-    function gate(isOn, t)
-        if isOn
-            if !wasOn t0 = time() end # a restart
-            start_timer(timer, delta, 0)
-        elseif wasOn
-            stop_timer(timer)
-        end
-        wasOn = isOn
-        return t
-    end
-
-    return lift(gate, test, diff)
+    cond        = test.value
+    delta       = 1.0/freq
+    time_signal = Input(time())
+    timer       = cond ? Timer(x->push!(time_signal, time()), 0, delta) : Timer(identity, 1, 0) # if started with test=false, create dummy timer
+    !cond && close(timer) # immediately close timer when condition is false
+    foldl(gate, (cond, timer), test, Input(time_signal), Input(delta))
+    return foldl(-, time(), time_signal)
 end
 fpswhen(test, freq) = fpswhen(signal(test), freq)
 
@@ -68,10 +56,11 @@ end
 # Returns:
 #     a signal of type (Float64, T) where the first element is the time
 #     at which the value (2nd element) got updated.
+_timestamp(x) = (time(), x)
 function timestamp{T}(s::Signal{T})
-    return lift(x -> (time(), x), (Float64, T), s)
+    return lift(_timestamp, s)
 end
-taimestamp(s) = timestamp(signal(s))
+timestamp(s) = timestamp(signal(s))
 
 # Collect signal updates into lists of updates within a given time
 # period.
