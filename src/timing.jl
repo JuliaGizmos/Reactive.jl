@@ -57,9 +57,7 @@ end
 #     a signal of type (Float64, T) where the first element is the time
 #     at which the value (2nd element) got updated.
 _timestamp(x) = (time(), x)
-function timestamp{T}(s::Signal{T})
-    return lift(_timestamp, s)
-end
+timestamp{T}(s::Signal{T}) = lift(_timestamp, s)
 timestamp(s) = timestamp(signal(s))
 
 # Collect signal updates into lists of updates within a given time

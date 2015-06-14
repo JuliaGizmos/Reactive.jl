@@ -6,7 +6,7 @@ order: 1
 
 ![](Star-On-Machine.jpg)
 
-Reactive.jl is a Julia package for [Reactive Programming](http://en.wikipedia.org/Reactive_Programming). It makes writing event-driven programs simple.
+Reactive.jl is a Julia package for [Reactive Programming](https://en.wikipedia.org/wiki/Reactive_programming). It makes writing event-driven programs simple.
 
 Reactive borrows its design from [Elm](http://elm-lang.org/) (see also [Functional Reactive Programming](http://elm-lang.org/learn/What-is-FRP.elm)).
 
@@ -57,10 +57,12 @@ x.value
 The `lift` operator can be used to transform one signal into another.
 
 ```{.julia execute="false"}
-xsquared = lift(a -> a*a, Int, x)
+xsquared = lift(a -> a*a, x)
 typeof(xsquared)
 # => Lift{Int64}
 super(Reactive.Lift{Int64})
+# => Node{Int64}
+super(super(Reactive.Lift{Int64}))
 # => Signal{Int64}
 xsquared.value
 # => 4
@@ -76,12 +78,12 @@ xsquared.value
 ```
 `lift` can take more than one signal as argument.
 ```{.julia execute="false"}
-y = lift((a, b) -> a + b, Int, x, xsquared)
+y = lift((a, b) -> a + b, x, xsquared; typ = Int)
 y.value
 # => 12
 ```
 
-**Example: A stupid line-droid**
+**Example: A stupid line-follower bot**
 
 In the examples below we explore how a simple line-follower robot could be programmed with Reactive.
 
@@ -111,8 +113,8 @@ function v_right(sensors)
    sensors[2] - sensors[3]
 end
 
-left_motor  = lift(v_left,  Float64, sensor_input)
-right_motor = lift(v_right, Float64, sensor_input)
+left_motor  = lift(v_left,  sensor_input, typ=Float64)
+right_motor = lift(v_right, sensor_input, typ=Float64)
 ```
 
 The `@lift` macro makes this simpler:
@@ -174,7 +176,7 @@ function difference(prev, x)
     return (x-prev_val, x)
 end
 
-diff = lift(x->x[1], foldl(difference, 0.0, signal))
+diff = lift(x->x[1], foldl(difference, (0.0, 0.0), signal))
 ```
 
 Note that this method has the advantage that all state is explicit. You could accomplish this by using a global variable to store `prev_val`, but that is not recommended.

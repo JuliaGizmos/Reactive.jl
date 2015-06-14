@@ -4,9 +4,31 @@ using Compat
 using Base.Order
 using Base.Collections
 
-export SignalSource, Signal, Input, Node, signal, value, lift, @lift, map, foldl,
-       flatten, switch, foldr, merge, filter, dropif, droprepeats, dropwhen,
-       sampleon, prev, keepwhen, ⟿
+export SignalSource,
+       Signal,
+       Input,
+       Node,
+       signal,
+       value,
+       lift,
+       @lift,
+       trylift,
+       consume,
+       tryconsume,
+       map,
+       foldl,
+       flatten,
+       switch,
+       foldr,
+       merge,
+       filter,
+       dropif,
+       droprepeats,
+       dropwhen,
+       sampleon,
+       prev,
+       keepwhen,
+       ⟿
 
 import Base: eltype, join_eltype, convert, push!, merge, map, show, writemime, filter
 
@@ -335,6 +357,22 @@ lift(f::Callable, inputs::Signal...; init=f(map(value, inputs)...), typ=typeof(i
 
 lift(f::Callable, inputs::SignalSource...; kwargs...) =
     lift(f, map(signal, inputs)...; kwargs...)
+
+const consume = lift
+
+typealias Try{T} Union(T, Exception)
+
+wraptrycatch(typ, f) =
+    (a...) -> try
+        convert(typ, f(a...))
+    catch ex
+        ex
+    end
+
+trylift(f::Callable, typ::Type, inputs...;
+        init=wraptrycatch(typ, f)(map(value, inputs)...)) =
+    lift(wraptrycatch(typ, f), inputs...; init=init, typ=Try{typ})
+const tryconsume = trylift
 
 # Uncomment in Julia >= 0.3 to enable cute infix operators.
 #     ⟿(signals::(Any...), f::Callable) = lift(f, signals...)
