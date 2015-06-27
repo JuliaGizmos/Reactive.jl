@@ -8,7 +8,7 @@ export every, fpswhen, fps, timestamp
 #     a periodically updating timestamp as a signal
 function every(delta::Float64)
     i = Input(time())
-    update(timer) = push!(i, time())
+    @compat update(timer::Timer) = push!(i, time())
     t = Timer(update, delta, delta)
     return lift(identity,  i) # prevent push!
 end
@@ -21,7 +21,7 @@ end
 #     freq: the maximum frequency at which fpswhen should update
 # Returns:
 #     an signal of Float64 time deltas
-function gate(wason_timer::Tuple{Bool, Timer}, ison::Bool, s::Input{Float64}, delta::Float64)
+function gate(wason_timer::(@compat Tuple{Bool, Timer}), ison::Bool, s::Input{Float64}, delta::Float64)
     wason, timer = wason_timer
     (!wason&&ison) && return (ison, Timer(x->push!(s, time()), 0, delta)) # start pushing again
     (wason&&!ison) && (close(timer); return (ison, timer)) # stop it now!
