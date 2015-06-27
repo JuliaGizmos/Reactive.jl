@@ -3,6 +3,7 @@ module Reactive
 using Compat
 using Base.Order
 using Base.Collections
+import Base.consume
 
 export SignalSource,
        Signal,
@@ -352,13 +353,13 @@ end
 # Returns:
 #     a signal which updates when an argument signal updates.
 
-lift(f::Callable, inputs::Signal...; init=f(map(value, inputs)...), typ=typeof(init)) =
+consume(f::Callable, inputs::Signal...; init=f(map(value, inputs)...), typ=typeof(init)) =
     Lift{typ}(f, inputs, init)
 
-lift(f::Callable, inputs::SignalSource...; kwargs...) =
-    lift(f, map(signal, inputs)...; kwargs...)
+consume(f::Callable, inputs::SignalSource...; kwargs...) =
+    consume(f, map(signal, inputs)...; kwargs...)
 
-const consume = lift
+lift(args...; kwargs...) = consume(args...; kwargs...)
 
 typealias Try{T} Union(T, Exception)
 
