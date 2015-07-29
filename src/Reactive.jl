@@ -328,11 +328,12 @@ begin
                 isupdating = false
                 return nothing
             catch ex
+                bt = catch_backtrace()
                 # FIXME: Rethink this.
                 isupdating = false
                 showerror(STDERR, ex)
                 println(STDERR)
-                Base.show_backtrace(STDERR, catch_backtrace())
+                Base.show_backtrace(STDERR, bt)
                 println(STDERR)
                 throw(ex)
             end
