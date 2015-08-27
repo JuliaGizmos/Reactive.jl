@@ -18,7 +18,7 @@
     <div class="container">
       <div class="row">
         <ul>
-          <li><div id="pkgname">Reactive 0.2.0+</div></li>
+          <li><div id="pkgname">Reactive 0.2.2+</div></li>
           <li><a href="http://github.com/JuliaLang/Reactive.jl">Code</a></li>
           <li><a href="http://github.com/JuliaLang/Reactive.jl/issues">Issues</a></li>
         </ul>
@@ -172,36 +172,17 @@ a merged signal
 a signal of time delta between two updates
 </div>
 <h2 id="fpswhen"><a href="#fpswhen">fpswhen</a></h2>
-<div class="api-doc">
-<p>Same as the fps function, but you can turn it on and off. The first time delta after a pause is always zero, no matter how long the pause was.</p>
-<h4><a href="#args-10">Args</a></h4>
-<ul>
-<li><code>test</code>: a switch signal of booleans to turn fps on or off</li>
-<li><code>freq</code>: the maximum frequency at which fpswhen should update</li>
-</ul>
-<h4><a href="#returns-8">Returns</a></h4>
-an signal of Float64 time deltas
-</div>
 <h2 id="every"><a href="#every">every</a></h2>
 <div class="api-doc">
 <p>Create a signal of timestamps that updates every delta seconds</p>
-<h4><a href="#args-11">Args</a></h4>
+<h4><a href="#args-10">Args</a></h4>
 <ul>
 <li><code>delta</code>: interval between updates.</li>
 </ul>
-<h4><a href="#returns-9">Returns</a></h4>
+<h4><a href="#returns-8">Returns</a></h4>
 a periodically updating timestamp as a signal
 </div>
 <h2 id="timestamp"><a href="#timestamp">timestamp</a></h2>
-<div class="api-doc">
-<p>Timestamp a signal.</p>
-<h4><a href="#args-12">Args</a></h4>
-<ul>
-<li><code>s</code>: a signal to timestamp</li>
-</ul>
-<h4><a href="#returns-10">Returns</a></h4>
-a signal of type (Float64, T) where the first element is the time at which the value (2nd element) got updated.
-</div>
         <hr>
       </div>
       </div>
@@ -305,7 +286,7 @@ a signal of type (Float64, T) where the first element is the time at which the v
     </div>
 
   <footer class="col-sm-8">
-    <p class="muted">Last modified by Shashi Gowda on Sun May 17 10:36:03 IST 2015. Generated with
+    <p class="muted">Last modified by Shashi Gowda on Thu Aug 27 21:59:48 IST 2015. Generated with
     <a href="https://github.com/dcjones/Judo.jl">Judo</a>.</p>
   </footer>
 

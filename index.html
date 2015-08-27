@@ -18,7 +18,7 @@
     <div class="container">
       <div class="row">
         <ul>
-          <li><div id="pkgname">Reactive 0.2.0+</div></li>
+          <li><div id="pkgname">Reactive 0.2.2+</div></li>
           <li><a href="http://github.com/JuliaLang/Reactive.jl">Code</a></li>
           <li><a href="http://github.com/JuliaLang/Reactive.jl/issues">Issues</a></li>
         </ul>
@@ -60,28 +60,30 @@ typeof(x)
 <span class="co"># =&gt; Input{Int64}</span>
 super(Input{<span class="dt">Int64</span>})
 <span class="co"># =&gt; Signal{Int64}</span>
-x.value
+value(x)
 <span class="co"># =&gt; 0</span>
 push!(x, <span class="fl">2</span>)
-x.value
+value(x)
 <span class="co"># =&gt; 2</span></code></pre>
-<h2 id="do-you-even-lift"><a href="#do-you-even-lift">Do you even lift?</a></h2>
+<h2 id="derived-signals"><a href="#derived-signals">Derived signals</a></h2>
 <p>The <code>lift</code> operator can be used to transform one signal into another.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">xsquared = lift(a -&gt; a*a, <span class="dt">Int</span>, x)
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">xsquared = lift(a -&gt; a*a, x)
 typeof(xsquared)
 <span class="co"># =&gt; Lift{Int64}</span>
 super(Reactive.Lift{<span class="dt">Int64</span>})
+<span class="co"># =&gt; Node{Int64}</span>
+super(super(Reactive.Lift{<span class="dt">Int64</span>}))
 <span class="co"># =&gt; Signal{Int64}</span>
-xsquared.value
+value(xsquared)
 <span class="co"># =&gt; 4</span></code></pre>
-<p>The type of the lifted signal can be given as the second argument to <code>lift</code>. It is assumed to be Any if omitted.</p>
+<p>The type of the lifted signal can be specified using a keyword argument <code>typ=T</code> to <code>lift</code>. If omitted, it is determined from the type returned by the function, using the current <code>value</code>s of its inputs.</p>
 <p>Now for every value <code>x</code> takes, <code>xsquared</code> will hold its square.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">push!(x, <span class="fl">3</span>)
-xsquared.value
+value(xsquared)
 <span class="co"># =&gt; 9</span></code></pre>
 <p><code>lift</code> can take more than one signal as argument.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">y = lift((a, b) -&gt; a + b, <span class="dt">Int</span>, x, xsquared)
-y.value
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">y = lift((a, b) -&gt; a + b, x, xsquared; typ = <span class="dt">Int</span>)
+value(y)
 <span class="co"># =&gt; 12</span></code></pre>
 <p><strong>Example: A stupid line-follower bot</strong></p>
 <p>In the examples below we explore how a simple line-follower robot could be programmed with Reactive.</p>
@@ -200,14 +202,14 @@ sensor_input = lift(read_sensors, fpswhen(circuit_not_complete, <span class="fl"
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
 timestamped_votes = timestamp(votes)</code></pre>
 <p><code>timestamped_votes</code> is a signal of <code>(timestamp, vote)</code> where <code>timestamp</code> is a <code>Float64</code> timestamp denoting when the <code>vote</code> came in.</p>
-<h1 id="possible-uses"><a href="#possible-uses">Possible uses</a></h1>
-<p>I am currently using Reactive to build interactive widgets on <a href="http://github.com/JuliaLang/IJulia.jl">IJulia</a>. Reactive is aimed at making event-driven programming simple. You could use Reactive to build:</p>
+<h1 id="reactive-in-the-wild"><a href="#reactive-in-the-wild">Reactive in the wild</a></h1>
+<p>Reactive is a great substrate to build interactive GUI libraries. Here are a few projects that make use of Reactive:</p>
 <ul>
-<li>Interactive user interfaces (watch out for <a href="https://github.com/shashi/Interact.jl">Interact.jl</a>)</li>
-<li>Animations</li>
-<li>Robotics and automation</li>
-<li>Queueing systems and service-oriented apps</li>
+<li><a href="https://github.com/JuliaLang/Interact.jl">Interact.jl</a></li>
+<li><a href="https://github.com/JuliaLang/Interact.jl">Escher.jl</a></li>
+<li><a href="https://github.com/SimonDanisch/GLPlot.jl">GLPlot.jl</a></li>
 </ul>
+<p>It could also be potentially used for other projects that require any kind of event handling: controlling robots, making music or simulations.</p>
 <h1 id="reporting-bugs"><a href="#reporting-bugs">Reporting Bugs</a></h1>
 <p>Let me know about any bugs, counterintuitive behavior, or enhancements you'd like by <a href="https://github.com/shashi/Reactive.jl/issues/new">filing a bug</a> on github.</p>
         <hr>
@@ -231,7 +233,7 @@ timestamped_votes = timestamp(votes)</code></pre>
                 <a style="margin-left: 1.0em" class="toc-item" href="#signals">Signals</a>
             </li>
             <li>
-                <a style="margin-left: 1.0em" class="toc-item" href="#do-you-even-lift">Do you even lift?</a>
+                <a style="margin-left: 1.0em" class="toc-item" href="#derived-signals">Derived signals</a>
             </li>
             <li>
                 <a style="margin-left: 1.0em" class="toc-item" href="#the-event-loop">The Event Loop</a>
@@ -246,7 +248,7 @@ timestamped_votes = timestamp(votes)</code></pre>
                 <a style="margin-left: 1.0em" class="toc-item" href="#timed-signals-and-sampling">Timed signals and sampling</a>
             </li>
             <li>
-                <a style="margin-left: 0.5em" class="toc-item" href="#possible-uses">Possible uses</a>
+                <a style="margin-left: 0.5em" class="toc-item" href="#reactive-in-the-wild">Reactive in the wild</a>
             </li>
             <li>
                 <a style="margin-left: 0.5em" class="toc-item" href="#reporting-bugs">Reporting Bugs</a>
@@ -274,7 +276,7 @@ timestamped_votes = timestamp(votes)</code></pre>
     </div>
 
   <footer class="col-sm-8">
-    <p class="muted">Last modified by Shashi Gowda on Sun May 17 10:36:03 IST 2015. Generated with
+    <p class="muted">Last modified by Shashi Gowda on Thu Aug 27 21:59:48 IST 2015. Generated with
     <a href="https://github.com/dcjones/Judo.jl">Judo</a>.</p>
   </footer>
 
