@@ -276,13 +276,14 @@ timestamped_votes = timestamp(votes)
 ```
 `timestamped_votes` is a signal of `(timestamp, vote)` where `timestamp` is a `Float64` timestamp denoting when the `vote` came in.
 
-# Possible uses
-I am currently using Reactive to build interactive widgets on [IJulia](http://github.com/JuliaLang/IJulia.jl). Reactive is aimed at making event-driven programming simple. You could use Reactive to build:
+# Reactive in the wild
+Reactive is a great substrate to build interactive GUI libraries. Here are a few projects that make use of Reactive:
 
-* Interactive user interfaces (watch out for [Interact.jl](https://github.com/shashi/Interact.jl))
-* Animations
-* Robotics and automation
-* Queueing systems and service-oriented apps
+* [Interact.jl](https://github.com/JuliaLang/Interact.jl)
+* [Escher.jl](https://github.com/JuliaLang/Interact.jl)
+* [GLPlot.jl](https://github.com/SimonDanisch/GLPlot.jl)
+
+It could also be potentially used for other projects that require any kind of event handling: controlling robots, making music or simulations.
 
 # Reporting Bugs
 
