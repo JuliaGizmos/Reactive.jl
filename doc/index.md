@@ -45,14 +45,14 @@ typeof(x)
 # => Input{Int64}
 super(Input{Int64})
 # => Signal{Int64}
-x.value
+value(x)
 # => 0
 push!(x, 2)
-x.value
+value(x)
 # => 2
 ```
 
-## Do you even lift?
+## Derived signals
 
 The `lift` operator can be used to transform one signal into another.
 
@@ -64,22 +64,22 @@ super(Reactive.Lift{Int64})
 # => Node{Int64}
 super(super(Reactive.Lift{Int64}))
 # => Signal{Int64}
-xsquared.value
+value(xsquared)
 # => 4
 ```
 
-The type of the lifted signal can be given as the second argument to `lift`. It is assumed to be Any if omitted.
+The type of the lifted signal can be specified using a keyword argument `typ=T` to `lift`. If omitted, it is determined from the type returned by the function, using the current `value`s of its inputs.
 
 Now for every value `x` takes, `xsquared` will hold its square.
 ```{.julia execute="false"}
 push!(x, 3)
-xsquared.value
+value(xsquared)
 # => 9
 ```
 `lift` can take more than one signal as argument.
 ```{.julia execute="false"}
 y = lift((a, b) -> a + b, x, xsquared; typ = Int)
-y.value
+value(y)
 # => 12
 ```
 
