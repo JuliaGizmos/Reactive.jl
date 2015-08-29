@@ -9,6 +9,7 @@ export consume,
        keepwhen,
        dropwhen,
        merge,
+       previous,
        delay,
        boundcopy,
        droprepeats,
@@ -120,8 +121,13 @@ function merge(inputs...)
     n
 end
 
+function previous{T}(input::Node{T}, default=value(input))
+    n = Node(T, default)
+    connect_previous(n, input)
+    n
+end
 
-function connect_delay(output, input)
+function connect_previous(output, input)
     let prev_value = value(input)
         add_action!(input, output) do timestep
             send_value!(output, prev_value, timestep)
@@ -131,11 +137,16 @@ function connect_delay(output, input)
 end
 
 function delay{T}(input::Node{T}, default=value(input))
-    n = Node(T, value(input))
+    n = Node(T, default)
     connect_delay(n, input)
     n
 end
 
+function connect_delay(output, input)
+    add_action!(input, output) do timestep
+        push!(output, value(input))
+    end
+end
 
 function connect_bind(a, b)
     let current_timestep = 0
