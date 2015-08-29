@@ -1,47 +1,50 @@
 import Base: push!, eltype, consume
-export Signal, Input, Node, push!, value, step
- 
+export Signal, Input, Node, push!, value, close
+
 ##### Node #####
- 
+
+immutable Action
+    recipient::WeakRef
+    f::Function
+end
+isrequired(a::Action) = a.recipient.value != nothing && a.recipient.value.alive
+
 type Node{T}
     value::T
-    actions::Vector{WeakRef}
+    actions::Vector{Action}
     alive::Bool
 end
-Node(x) = Node(x, WeakRef[], true)
-Node{T}(::Type{T}, x) = Node{T}(x, WeakRef[], true)
- 
+Node(x) = Node(x, Action[], true)
+Node{T}(::Type{T}, x) = Node{T}(x, Action[], true)
+
+# preserve/unpreserve nodes from gc
+const _nodes = ObjectIdDict()
+preserve_node(x) = _nodes[x] = get(_nodes,x,0)+1
+unpreserve_node(x) = (v = _nodes[x]; v == 1 ? pop!(_nodes,x) : (_nodes[x] = v-1); nothing)
+
 typealias Signal Node
 typealias Input Node
 
 Base.show(io::IO, n::Node) =
-    write(io, "Node{$(eltype(n))}($(n.value), nactions=$(length(n.actions))$(n.alive ? "" : ", killed!"))")
+    write(io, "Node{$(eltype(n))}($(n.value), nactions=$(length(n.actions))$(n.alive ? "" : ", closed"))")
  
 value(n::Node) = n.value
 eltype{T}(::Node{T}) = T
 eltype{T}(::Type{Node{T}}) = T
-kill(n::Node) = (n.alive = false; n)
- 
+
 ##### Connections #####
  
-const _recipients_dict = WeakKeyDict()
-
 function add_action!(f, node, recipient)
-    push!(node.actions, WeakRef(f))
-
-    # hold on to the actions for nodes still in scope
-    if haskey(_recipients_dict, recipient)
-        push!(_recipients_dict[recipient], f)
-    else
-        _recipients_dict[recipient] = [f]
-    end
+    push!(node.actions, Action(WeakRef(recipient), f))
 end
 
 function remove_action!(f, node, recipient)
-    node.actions = filter(a -> a.value != f, node.actions)
-    if haskey(_recipients_dict, recipient)
-        _recipients_dict[recipient] = filter(g -> g != f, _recipients_dict[recipient])
-    end
+    node.actions = filter(a -> a.f != f, node.actions)
+end
+
+function close(n::Node)
+    n.alive = false
+    empty!(n.actions)
 end
 
 function send_value!(node, x, timestep)
@@ -51,17 +54,16 @@ function send_value!(node, x, timestep)
     # Set the value and do actions
     node.value = x
     for action in node.actions
-        do_action(action.value, timestep)
-     end
+        do_action(action, timestep)
+    end
 end
 
-# Nothing is a weakref gone stale.
-do_action(f::Nothing, timestep) = nothing
-do_action(f::Function, timestep) = f(timestep)
+do_action(a::Action, timestep) =
+    isrequired(a) && a.f(a.recipient.value, timestep)
 
 # If any actions have been gc'd, remove them
 cleanup_actions(node::Node) =
-    node.actions = filter(n -> n.value != nothing, node.actions)
+    node.actions = filter(isrequired, node.actions)
 
 
 ##### Messaging #####

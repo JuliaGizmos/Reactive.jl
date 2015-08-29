@@ -19,7 +19,7 @@ function fpswhen_connect(rate, switch, output)
         dt = 1.0/rate # minimum dt
 
         for inp in [output, switch]
-            add_action!(inp, output) do timestep
+            add_action!(inp, output) do output, timestep
                 start_time = time()
                 value(switch) && @compat Timer(x -> push!(output, time() - prev_time), dt)
                 prev_time = start_time
@@ -44,7 +44,7 @@ end
 
 function debounce_connect(dt, output, input)
     local timer
-    add_action!(input, output) do timestep
+    add_action!(input, output) do output, timestep
         isdefined(:timer) && close(timer)
         timer = @compat Timer(x -> push!(output, value(input)), dt)
     end
