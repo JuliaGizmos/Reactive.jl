@@ -37,6 +37,13 @@ function add_action!(f, node, recipient)
     end
 end
 
+function remove_action!(f, node, recipient)
+    node.actions = filter(a -> a.value != f, node.actions)
+    if haskey(_recipients_dict, recipient)
+        _recipients_dict[recipient] = filter(g -> g != f, _recipients_dict[recipient])
+    end
+end
+
 function send_value!(node, x, timestep)
     # Dead node?
     !node.alive && return

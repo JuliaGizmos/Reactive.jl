@@ -122,12 +122,15 @@ end
 
 
 function connect_delay(output, input)
-    add_action!(input, output) do timestep
-        push!(output, value(input)) # Add it to the very end
+    let prev_value = value(input)
+        add_action!(input, output) do timestep
+            send_value!(output, prev_value, timestep)
+            prev_value = value(input)
+        end
     end
 end
 
-function delay{T}(input::Node{T})
+function delay{T}(input::Node{T}, default=value(input))
     n = Node(T, value(input))
     connect_delay(n, input)
     n
@@ -178,13 +181,20 @@ end
 
 
 function connect_flatten(output, input)
-    let current_node = value(input)
-        add_action!(input, output) do timestep
-            current_node = value(input)
+    let current_node = value(input),
+        callback = timestep -> begin
             send_value!(output, value(current_node), timestep)
         end
 
-        add_action!(current_node, output) do timestep
+        add_action!(callback, current_node, output)
+
+        add_action!(input, output) do timestep
+
+            # Move around action from previous node to current one
+            remove_action!(callback, current_node, output)
+            current_node = value(input)
+            add_action!(callback, current_node, output)
+
             send_value!(output, value(current_node), timestep)
         end
     end

@@ -8,6 +8,6 @@ function crash(x)
 end
 
 facts("push! inside push!") do
-    b = lift(crash, a)
-    @fact_throws push!(a, 1)
+    b = consume(crash, a)
+    @fact push!(a, 1)
 end

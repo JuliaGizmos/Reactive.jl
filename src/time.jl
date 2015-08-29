@@ -2,15 +2,15 @@ using Compat
 
 export every, fps, fpswhen, debounce
 
-function every_connect(dt, output)
-    timer = @compat Timer(x -> push!(output, time()), dt, dt)
-    finalizer(output, x -> close(timer))
-end
-
 function every(dt)
     n = Node(time())
     every_connect(dt, n)
     n
+end
+
+function every_connect(dt, output)
+    timer = @compat Timer(x -> push!(output, time()), dt, dt)
+    finalizer(output, x -> close(timer))
 end
 
 
