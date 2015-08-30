@@ -10,9 +10,9 @@ number() = round(Int, rand()*1000)
 facts("Basic checks") do
 
     a = Input(number())
-    b = consume(x -> x*x, a)
+    b = map(x -> x*x, a)
 
-    context("consume") do
+    context("map") do
 
         # Lift type
         #@fact typeof(b) => Reactive.Lift{Int}
@@ -36,7 +36,7 @@ facts("Basic checks") do
         @fact value(b) => value(a)^2
 
         ## Multiple inputs to Lift
-        c = consume(+, a, b, typ=Int)
+        c = map(+, a, b, typ=Int)
         @fact value(c) => value(a) + value(b)
 
         push!(a, number())
@@ -63,7 +63,7 @@ facts("Basic checks") do
         # precedence to b over a -- a is older.
         @fact value(e) => value(a)
 
-        c = consume(_->_, a) # Make a younger than b
+        c = map(_->_, a) # Make a younger than b
         f = merge(d, c, b)
         push!(a, number())
         step()

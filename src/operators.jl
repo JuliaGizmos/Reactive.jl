@@ -1,6 +1,7 @@
-import Base: consume, filter, merge
+import Base: map, merge, filter
 
-export consume,
+export map,
+       foreach,
        probe,
        filter, 
        dropif,
@@ -15,7 +16,15 @@ export consume,
        droprepeats,
        flatten
 
-function connect_consume(f, output, inputs...)
+function map(f, inputs::Node...;
+             init=f(map(value, inputs)...), typ=typeof(init))
+
+    n = Node(typ, init)
+    connect_map(f, n, inputs...)
+    n
+end
+
+function connect_map(f, output, inputs...)
     let prev_timestep = 0
         for inp in inputs
             add_action!(inp, output) do output, timestep
@@ -29,15 +38,11 @@ function connect_consume(f, output, inputs...)
     end
 end
 
-function consume(f, inputs...; init=f(map(value, inputs)...), typ=typeof(init))
-    n = Node(typ, init)
-    connect_consume(f, n, inputs...)
-    n
-end
+foreach(f, inputs...; kwargs...) =
+    preserve(map(f, inputs...; kwargs...))
 
 probe(node, name, io=STDERR) =
-    consume(x -> println(io, name, " >! ", x), node)
-
+    map(x -> println(io, name, " >! ", x), node)
 
 function connect_filter(f, output, input)
     add_action!(input, output) do output, timestep
@@ -98,7 +103,7 @@ function keepwhen{T}(predicate::Node{Bool}, default, input::Node{T})
 end
 
 dropwhen(predicate, default, node) =
-    keepwhen(consume(!, predicate), default, node)
+    keepwhen(map(!, predicate), default, node)
 
 function connect_merge(output, inputs...)
     let prev_timestep = 0
