@@ -164,4 +164,28 @@ facts("Basic checks") do
         dw = dropwhen(b, 0, n)
         @fact value(dw) => 2
     end
+
+    context("push! inside push!") do
+        a = Input(0)
+        b = Input(1)
+        foreach(x -> push!(a, x), b)
+
+        @fact value(a) => 0
+
+        step()
+        @fact value(a) => 1
+
+        push!(a, 2)
+        step()
+        @fact value(a) => 2
+        @fact value(b) => 1
+
+        push!(b, 3)
+        step()
+        @fact value(b) => 3
+        @fact value(a) => 2
+
+        step()
+        @fact value(a) => 3
+    end
 end
