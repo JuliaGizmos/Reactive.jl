@@ -11,6 +11,7 @@ end
 function every_connect(dt, output)
     timer = @compat Timer(x -> push!(output, time()), dt, dt)
     finalizer(output, x -> close(timer))
+    output
 end
 
 
@@ -44,7 +45,7 @@ end
 
 function debounce_connect(dt, output, input)
     local timer
-    add_action!(input, output) do output, timestep
+    add_action!(input, output) do timestep
         isdefined(:timer) && close(timer)
         timer = @compat Timer(x -> push!(output, value(input)), dt)
     end

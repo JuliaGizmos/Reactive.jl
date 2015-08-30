@@ -1,5 +1,9 @@
-import Base: push!, eltype, consume
+import Base: push!, eltype, close
 export Signal, Input, Node, push!, value, close
+
+if VERSION < v"0.4.0-dev"
+    finalize(o) = (gc(); gc()) #LOL
+end
 
 ##### Node #####
 
@@ -19,8 +23,12 @@ Node{T}(::Type{T}, x) = Node{T}(x, Action[], true)
 
 # preserve/unpreserve nodes from gc
 const _nodes = ObjectIdDict()
-preserve_node(x) = _nodes[x] = get(_nodes,x,0)+1
-unpreserve_node(x) = (v = _nodes[x]; v == 1 ? pop!(_nodes,x) : (_nodes[x] = v-1); nothing)
+preserve(x::Node) = _nodes[x] = get(_nodes,x,0)+1
+function unpreserve(x::Node)
+    v = _nodes[x]
+    v == 1 ? pop!(_nodes,x) : (_nodes[x] = v-1)
+    nothing
+end
 
 typealias Signal Node
 typealias Input Node
@@ -44,6 +52,7 @@ end
 
 function close(n::Node)
     n.alive = false
+    finalize(n) # stop timer etc.
     empty!(n.actions)
 end
 
@@ -117,3 +126,5 @@ let timestep = 0
         end
     end
 end
+
+run_till_now() = run(queue_size(_messages))

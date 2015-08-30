@@ -1,4 +1,5 @@
 include("basics.jl")
 include("call_count.jl")
 include("flatten.jl")
+include("time.jl")
 FactCheck.exitstatus()
