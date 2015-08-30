@@ -16,13 +16,20 @@ export map,
        droprepeats,
        flatten
 
-function map(f, inputs::Node...;
+function _map(f, inputs::Node...;
              init=f(map(value, inputs)...), typ=typeof(init))
 
     n = Node(typ, init)
     connect_map(f, n, inputs...)
     n
 end
+
+# julia 0.3 loses it if this method doesn't exist
+map(f::Union(Function, DataType), inputs::Node...; kwargs...) =
+    _map(f, inputs...; kwargs...)
+
+map(f, inputs::Node...; kwargs...) =
+    _map(f, inputs...; kwargs...)
 
 function connect_map(f, output, inputs...)
     let prev_timestep = 0

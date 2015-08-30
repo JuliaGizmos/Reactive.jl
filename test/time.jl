@@ -41,7 +41,7 @@ facts("Timing functions") do
         if VERSION >= v"0.4.0-dev"
             @fact Reactive.queue_size(Reactive._messages) --> 0
         else
-            warn("every will not stop the timer on julia 0.3")
+            warn("closing an `every` node does not stop the timer on julia 0.3")
         end
     end
 end

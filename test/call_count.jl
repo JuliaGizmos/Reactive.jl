@@ -5,10 +5,10 @@ facts("Call counting") do
     a = Input(0)
     b = Input(0)
 
-    c = consume(+, a, b)
+    c = map(+, a, b)
     d = merge(a, b)
-    e = consume(+, a, consume(x->2x, a)) # Both depend on a
-    f = consume(+, a, b, c, e)
+    e = map(+, a, map(x->2x, a)) # Both depend on a
+    f = map(+, a, b, c, e)
 
     count = s -> foldp((x, y) -> x+1, 0, s)
 
