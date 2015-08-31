@@ -1,10 +1,6 @@
 import Base: push!, eltype, close
 export Signal, Input, Node, push!, value, close
 
-if VERSION < v"0.4.0-dev"
-    finalize(o) = (gc(); gc()) #LOL
-end
-
 ##### Node #####
 
 immutable Action
@@ -50,10 +46,18 @@ function remove_action!(f, node, recipient)
     node.actions = filter(a -> a.f != f, node.actions)
 end
 
-function close(n::Node)
-    n.alive = false
+if VERSION < v"0.4.0-dev"
+    include("finalize_compat.jl")
+end
+
+function close(n::Node, warn_nonleaf=true)
     finalize(n) # stop timer etc.
-    empty!(n.actions)
+    n.alive = false
+    if !isempty(n.actions)
+        any(map(isrequired, n.actions)) && warn_nonleaf &&
+            warn("closing a non-leaf node is not a good idea")
+        empty!(n.actions)
+    end
 end
 
 function send_value!(node, x, timestep)
