@@ -2,6 +2,26 @@ using Compat
 
 export every, fps, fpswhen, debounce
 
+# Aggregate a signal producing an update at most once in dt seconds
+function timewindow_connect(dt, output, input, f, init)
+    local timer
+    let collected = init
+        add_action!(input, output) do output, timestep
+            isdefined(:timer) && close(timer)
+            collected = f(collected,  value(input))
+            timer = @compat Timer(x -> begin push!(output, collected); collected=reinit(collected) end, dt)
+        end
+    end
+end
+
+function timewindow{T}(dt, node::Node{T}, f=push!, init=T[], reinit=x->copy(init))
+    output = Node(T[])
+    group_connect(dt, output, node, f, init, reinit)
+    output
+end
+
+# Keep the last value in the time window
+debounce(dt, node) = group(dt, node, (prev, x) -> x, value(node), x -> x)
 function every(dt)
     n = Node(time())
     every_connect(dt, n)
