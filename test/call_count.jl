@@ -1,5 +1,5 @@
 
-number() = round(Int, rand()*100)
+number() = rand(0:100)
 
 facts("Call counting") do
     a = Input(0)
@@ -25,11 +25,11 @@ facts("Call counting") do
         push!(b, number())
         step()
 
-        @fact ca.value => i
-        @fact cb.value => i
-        @fact cc.value => 2i
-        @fact cd.value => 2i
-        @fact ce.value => i
-        @fact cf.value => 2i
+        @fact ca.value --> i
+        @fact cb.value --> i
+        @fact cc.value --> 2i
+        @fact cd.value --> 2i
+        @fact ce.value --> i
+        @fact cf.value --> 2i
     end
 end

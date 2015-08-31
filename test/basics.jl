@@ -15,37 +15,37 @@ facts("Basic checks") do
     context("map") do
 
         # Lift type
-        #@fact typeof(b) => Reactive.Lift{Int}
+        #@fact typeof(b) --> Reactive.Lift{Int}
 
         # type conversion
         push!(a, 1.0)
         step()
-        @fact value(b) => 1
+        @fact value(b) --> 1
         # InexactError to be precise
         push!(a, 2.1)
         @fact_throws step()
 
-        @fact value(b) => 1
+        @fact value(b) --> 1
 
         push!(a, number())
         step()
-        @fact value(b) => value(a)^2
+        @fact value(b) --> value(a)^2
 
         push!(a, -number())
         step()
-        @fact value(b) => value(a)^2
+        @fact value(b) --> value(a)^2
 
         ## Multiple inputs to Lift
         c = map(+, a, b, typ=Int)
-        @fact value(c) => value(a) + value(b)
+        @fact value(c) --> value(a) + value(b)
 
         push!(a, number())
         step()
-        @fact value(c) => value(a) + value(b)
+        @fact value(c) --> value(a) + value(b)
 
         push!(b, number())
         step()
-        @fact value(c) => value(a) + value(b)
+        @fact value(c) --> value(a) + value(b)
     end
 
 
@@ -56,18 +56,18 @@ facts("Basic checks") do
         e = merge(d, b, a)
 
         # precedence to d
-        @fact value(e) => value(d)
+        @fact value(e) --> value(d)
 
         push!(a, number())
         step()
         # precedence to b over a -- a is older.
-        @fact value(e) => value(a)
+        @fact value(e) --> value(a)
 
         c = map(_->_, a) # Make a younger than b
         f = merge(d, c, b)
         push!(a, number())
         step()
-        @fact value(f) => value(c)
+        @fact value(f) --> value(c)
     end
 
     context("foldp") do
@@ -79,7 +79,7 @@ facts("Basic checks") do
         nums = round(Int, rand(100)*1000)
         map(x -> begin push!(a, x); step() end, nums)
 
-        @fact sum(nums) => value(f)
+        @fact sum(nums) --> value(f)
     end
 
     context("filter") do
@@ -88,15 +88,15 @@ facts("Basic checks") do
         pred = x -> x % 2 != 0
         h = filter(pred, 1, g)
 
-        @fact value(h) => 1
+        @fact value(h) --> 1
 
         push!(g, 2)
         step()
-        @fact value(h) => 1
+        @fact value(h) --> 1
 
         push!(g, 3)
         step()
-        @fact value(h) => 3
+        @fact value(h) --> 3
     end
 
     context("sampleon") do
@@ -108,13 +108,13 @@ facts("Basic checks") do
         i = Input(true)
         j = sampleon(i, g)
         # default value
-        @fact value(j) => value(g)
+        @fact value(j) --> value(g)
         push!(g, value(g)-1)
         step()
-        @fact value(j) => value(g)+1
+        @fact value(j) --> value(g)+1
         push!(i, true)
         step()
-        @fact value(j) => value(g)
+        @fact value(j) --> value(g)
     end
 
     context("droprepeats") do
@@ -124,14 +124,14 @@ facts("Basic checks") do
         k = Input(1)
         l = droprepeats(k)
 
-        @fact value(l) => value(k)
+        @fact value(l) --> value(k)
         push!(k, 1)
         step()
-        @fact value(l) => value(k)
+        @fact value(l) --> value(k)
         push!(k, 0)
         step()
         #println(l.value, " ", value(k))
-        @fact value(l) => value(k)
+        @fact value(l) --> value(k)
 
         m = count(k)
         n = count(l)
@@ -139,30 +139,30 @@ facts("Basic checks") do
         seq = [1, 1, 1, 0, 1, 0, 1, 0, 0]
         map(x -> begin push!(k, x); step() end, seq)
 
-        @fact value(m) => length(seq)
-        @fact value(n) => 6
+        @fact value(m) --> length(seq)
+        @fact value(n) --> 6
     end
 
-    context("dropwhen") do
-        # dropwhen
-        b = Input(true)
+    context("filterwhen") do
+        # filterwhen
+        b = Input(false)
         n = Input(1)
-        dw = dropwhen(b, 0, n)
-        @fact value(dw) => 0
+        dw = filterwhen(b, 0, n)
+        @fact value(dw) --> 0
         push!(n, 2)
         step()
-        @fact value(dw) => 0
-        push!(b, false)
+        @fact value(dw) --> 0
+        push!(b, true)
         step()
-        @fact value(dw) => 0
+        @fact value(dw) --> 0
         push!(n, 1)
         step()
-        @fact value(dw) => 1
+        @fact value(dw) --> 1
         push!(n, 2)
         step()
-        @fact value(dw) => 2
-        dw = dropwhen(b, 0, n)
-        @fact value(dw) => 2
+        @fact value(dw) --> 2
+        dw = filterwhen(b, 0, n)
+        @fact value(dw) --> 2
     end
 
     context("push! inside push!") do
@@ -170,22 +170,22 @@ facts("Basic checks") do
         b = Input(1)
         foreach(x -> push!(a, x), b)
 
-        @fact value(a) => 0
+        @fact value(a) --> 0
 
         step()
-        @fact value(a) => 1
+        @fact value(a) --> 1
 
         push!(a, 2)
         step()
-        @fact value(a) => 2
-        @fact value(b) => 1
+        @fact value(a) --> 2
+        @fact value(b) --> 1
 
         push!(b, 3)
         step()
-        @fact value(b) => 3
-        @fact value(a) => 2
+        @fact value(b) --> 3
+        @fact value(a) --> 2
 
         step()
-        @fact value(a) => 3
+        @fact value(a) --> 3
     end
 end
