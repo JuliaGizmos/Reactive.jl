@@ -95,7 +95,7 @@ const CHANNEL_SIZE = 1024
 const _messages = channel(sz=CHANNEL_SIZE)
 
 # queue an update. meta comes back in a ReactiveException if there is an error
-function Base.push!(n::Node, x; meta=nothing)
+function Base.push!(n::Node, x; meta::Any=nothing)
     taken = queue_size(_messages)
     if taken >= CHANNEL_SIZE
         warn("Message queue is full. Ordering may be incorrect.")
@@ -109,9 +109,11 @@ end
 include("exception.jl")
 
 # remove messages from the channel and propagate them
+global runner_task
 global run
 let timestep = 0
     function run(steps=typemax(Int))
+        runner_task = current_task()::Task
         local waiting, node, value, debug_meta, iter = 1
         try
             while iter <= steps
@@ -131,4 +133,5 @@ let timestep = 0
     end
 end
 
+# Run everything queued up till the instant of calling this function
 run_till_now() = run(queue_size(_messages))

@@ -4,9 +4,9 @@ export map,
        foreach,
        probe,
        filter, 
+       filterwhen,
        foldp,
        sampleon,
-       filterwhen,
        merge,
        previous,
        delay,
@@ -61,6 +61,18 @@ function filter{T}(f::Function, default, input::Node{T})
     n
 end
 
+function filterwhen{T}(predicate::Node{Bool}, default, input::Node{T})
+    n = Node(T, value(predicate) ? value(input) : default)
+    connect_filterwhen(n, predicate, input)
+    n
+end
+
+function connect_filterwhen(output, predicate, input)
+    add_action!(input, output) do output, timestep
+        value(predicate) && send_value!(output, value(input), timestep)
+    end
+end
+
 function connect_foldp(f, v0, output, input)
     let acc = v0
         add_action!(input, output) do output, timestep
@@ -91,17 +103,6 @@ function sampleon{T}(sampler, input::Node{T})
 end
 
 
-function connect_filterwhen(output, predicate, input)
-    add_action!(input, output) do output, timestep
-        value(predicate) && send_value!(output, value(input), timestep)
-    end
-end
-
-function filterwhen{T}(predicate::Node{Bool}, default, input::Node{T})
-    n = Node(T, value(predicate) ? value(input) : default)
-    connect_keepwhen(n, predicate, input)
-    n
-end
 
 function connect_merge(output, inputs...)
     let prev_timestep = 0
