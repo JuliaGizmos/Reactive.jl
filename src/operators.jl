@@ -10,7 +10,6 @@ export map,
        merge,
        previous,
        delay,
-       boundcopy,
        droprepeats,
        flatten
 
@@ -151,31 +150,6 @@ function connect_delay(output, input)
         push!(output, value(input))
     end
 end
-
-function connect_bind(a, b)
-    let current_timestep = 0
-        add_action!(a, b) do b, timestep
-            if current_timestep != timestep
-                current_timestep = timestep
-                send_value!(b, value(a), timestep)
-            end
-        end
-
-        add_action!(b, a) do a, timestep
-            if current_timestep != timestep
-                current_timestep = timestep
-                send_value!(a, value(b), timestep)
-            end
-        end
-    end
-end
-
-function boundcopy{T}(input::Node{T})
-    n = Node(T, value(input))
-    bind_conn(n, input)
-    n
-end
-
 
 function connect_droprepeats(output, input)
     let prev_value = value(input)
