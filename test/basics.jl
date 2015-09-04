@@ -21,7 +21,7 @@ facts("Basic checks") do
         push!(a, 1.0)
         @fact b.value => 1
         # InexactError to be precise
-        @fact_throws push!(a, 1.1)
+        @fact_throws InexactError push!(a, 1.1)
 
         push!(a, number())
         @fact b.value => a.value*a.value

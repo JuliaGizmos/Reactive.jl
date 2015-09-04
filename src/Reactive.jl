@@ -1,3 +1,5 @@
+VERSION >= v"0.4.0-dev+6521" && __precompile__()
+
 module Reactive
 
 using Compat
@@ -337,8 +339,7 @@ begin
           println(STDERR)
           throw(ex)
       end
-  end
-
+   end
 end
 
 # The `lift` operator can be used to create a new signal from
