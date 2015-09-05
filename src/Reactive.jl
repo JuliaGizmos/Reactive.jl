@@ -278,69 +278,68 @@ begin
     # Returns:
     #     nothing
     function push!{T}(input::Input{T}, val)
-        if isupdating
-            error("push! called when another signal is still updating.")
-        else
-            try
-                isupdating = true
-                input.value = convert(T, val)
-                heap = Any[] # a min-heap of (child, parent)
+      try
+          if isupdating
+              error("push! called when another signal is still updating.")
+          end
 
-                child_rank(x) = rank(x[1])
-                ord = By(child_rank)  # ordered topologically by child.rank
+          isupdating = true
+          input.value = convert(T, val)
+          heap = Any[] # a min-heap of (child, parent)
 
-                # first dirty parent
-                merge_parent = Dict{Merge, Signal}()
-                for c in input.children
-                    if isa(c, Merge)
-                        merge_parent[c] = input
-                    end
-                    heappush!(heap, (c, input), ord)
-                end
+          child_rank(x) = rank(x[1])
+          ord = By(child_rank)  # ordered topologically by child.rank
 
-                prev = nothing
-                while !isempty(heap)
-                    (n, parent) = heappop!(heap, ord)
-                    if n == prev
-                        continue # already processed
-                    end
-                    # Merge is a special case!
-                    if isa(n, Merge) && haskey(merge_parent, n)
-                        propagate = update(n, merge_parent[n])
-                    else
-                        propagate = update(n, parent)
-                    end
+          # first dirty parent
+          merge_parent = Dict{Merge, Signal}()
+          for c in input.children
+              if isa(c, Merge)
+                  merge_parent[c] = input
+              end
+              heappush!(heap, (c, input), ord)
+          end
 
-                    if propagate
-                        for c in n.children
-                            if isa(c, Merge)
-                                if haskey(merge_parent, c)
-                                    if c.ranks[n] < c.ranks[merge_parent[c]]
-                                        merge_parent[c] = n
-                                    end
-                                else
-                                    merge_parent[c] = n
-                                end
-                            end
-                            heappush!(heap, (c, n), ord)
-                        end
-                    end
-                    prev = n
-                end
-                isupdating = false
-                return nothing
-            catch ex
-                bt = catch_backtrace()
-                # FIXME: Rethink this.
-                isupdating = false
-                showerror(STDERR, ex)
-                println(STDERR)
-                Base.show_backtrace(STDERR, bt)
-                println(STDERR)
-                throw(ex)
-            end
-        end
-    end
+          prev = nothing
+          while !isempty(heap)
+              (n, parent) = heappop!(heap, ord)
+              if n == prev
+                  continue # already processed
+              end
+              # Merge is a special case!
+              if isa(n, Merge) && haskey(merge_parent, n)
+                  propagate = update(n, merge_parent[n])
+              else
+                  propagate = update(n, parent)
+              end
+
+              if propagate
+                  for c in n.children
+                      if isa(c, Merge)
+                          if haskey(merge_parent, c)
+                              if c.ranks[n] < c.ranks[merge_parent[c]]
+                                  merge_parent[c] = n
+                              end
+                          else
+                              merge_parent[c] = n
+                          end
+                      end
+                      heappush!(heap, (c, n), ord)
+                  end
+              end
+              prev = n
+          end
+          isupdating = false
+          return nothing
+      catch ex
+          # FIXME: Rethink this.
+          isupdating = false
+          showerror(STDERR, ex)
+          println(STDERR)
+          Base.show_backtrace(STDERR, catch_backtrace())
+          println(STDERR)
+          throw(ex)
+      end
+   end
 end
 
 # The `lift` operator can be used to create a new signal from
