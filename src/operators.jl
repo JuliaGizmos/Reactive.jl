@@ -48,7 +48,7 @@ foreach(f, inputs...; kwargs...) =
 probe(node, name, io=STDERR) =
     map(x -> println(io, name, " >! ", x), node)
 
-function connect_filter(f, output, input)
+function connect_filter(f, default, output, input)
     add_action!(input, output) do output, timestep
         val = value(input)
         f(val) && send_value!(output, val, timestep)
@@ -56,8 +56,8 @@ function connect_filter(f, output, input)
 end
 
 function filter{T}(f::Function, default, input::Node{T})
-    n = Node(T, default)
-    connect_filter(f, n, input)
+    n = Node(T, f(value(input)) ? value(input) : default)
+    connect_filter(f, default, n, input)
     n
 end
 

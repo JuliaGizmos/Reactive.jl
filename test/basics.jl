@@ -88,8 +88,10 @@ facts("Basic checks") do
         g = Input(0)
         pred = x -> x % 2 != 0
         h = filter(pred, 1, g)
+        j = filter(x -> x % 2 == 0, 1, g)
 
         @fact value(h) --> 1
+        @fact value(j) --> 0
 
         push!(g, 2)
         step()
