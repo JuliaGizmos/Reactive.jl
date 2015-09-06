@@ -18,7 +18,7 @@ facts("Timing functions") do
         sleep(0.11) # no more updates
         @fact queue_size() --> 0
 
-        @fact dt --> roughly(1, atol=0.1)
+        @fact dt --> roughly(1, atol=0.2) # mac OSX needs a lot of tolerence here
         @fact value(acc) --> 10
 
     end
@@ -65,6 +65,63 @@ facts("Timing functions") do
         sleep(0.2)
         # make sure close actually also closed the timer
         @fact queue_size() --> 0
+    end
+
+    context("throttle") do
+        x = Input(0)
+        y = throttle(0.1, x)
+        y′ = throttle(0.2, x, push!, Int[], x->Int[]) # collect intermediate updates
+        z = foldp((acc, x) -> acc+1, 0, y)
+        z′ = foldp((acc, x) -> acc+1, 0, y)
+
+        push!(x, 1)
+        step()
+
+        push!(x, 2)
+        step()
+
+        push!(x, 3)
+        t0=time()
+        step()
+
+        @fact value(y) --> 0
+        @fact value(z) --> 0
+        @fact value(z′) --> 0
+        @fact queue_size() --> 0
+
+        sleep(0.07)
+
+        @fact value(y) --> 0 # update hasn't come in yet
+        @fact value(z′) --> 0
+        @fact queue_size() --> 0
+        sleep(0.1)
+        @fact queue_size() --> 1
+        step()
+        @fact value(y) --> 3
+        @fact value(z) --> 1
+        sleep(0.1)
+
+        @fact queue_size() --> 1
+        step()
+        @fact value(z′) --> 1
+        @fact value(y′) --> Int[1,2,3]
+
+        push!(x, 3)
+        step()
+
+        push!(x, 2)
+        step()
+
+        push!(x, 1)
+        step()
+        sleep(0.2)
+
+        @fact queue_size() --> 2
+        step()
+        step()
+        @fact value(y) --> 1
+        @fact value(z′) --> 2
+        @fact value(y′) --> Int[3,2,1]
     end
 end
 
