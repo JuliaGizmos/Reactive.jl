@@ -5,4 +5,6 @@ include("operators.jl")
 include("async.jl")
 include("time.jl")
 
+include("deprecation.jl")
+
 end # module
