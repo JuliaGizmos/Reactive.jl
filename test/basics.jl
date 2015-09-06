@@ -3,6 +3,7 @@ using Reactive
 using Compat
 
 step() = Reactive.run(1)
+queue_size() = Reactive.queue_size(Reactive._messages)
 number() = round(Int, rand()*1000)
 
 ## Basics
@@ -187,5 +188,43 @@ facts("Basic checks") do
 
         step()
         @fact value(a) --> 3
+    end
+
+    context("previous") do
+        x = Input(0)
+        y = previous(x)
+        @fact value(y) --> 0
+
+        push!(x, 1)
+        step()
+
+        @fact value(y) --> 0
+
+        push!(x, 2)
+        step()
+
+        @fact value(y) --> 1
+
+        push!(x, 3)
+        step()
+
+        @fact value(y) --> 2
+        @fact queue_size() --> 0
+    end
+
+
+    context("delay") do
+        x = Input(0)
+        y = delay(x)
+        @fact value(y) --> 0
+
+        push!(x, 1)
+        step()
+
+        @fact queue_size() --> 1
+        @fact value(y) --> 0
+
+        step()
+        @fact value(y) --> 1
     end
 end

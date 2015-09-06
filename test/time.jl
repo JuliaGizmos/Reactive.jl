@@ -1,4 +1,3 @@
-queue_size() = Reactive.queue_size(Reactive._messages)
 
 facts("Timing functions") do
 
@@ -94,7 +93,7 @@ facts("Timing functions") do
         @fact value(y) --> 0 # update hasn't come in yet
         @fact value(z′) --> 0
         @fact queue_size() --> 0
-        sleep(0.1)
+        sleep(0.03)
         @fact queue_size() --> 1
         step()
         @fact value(y) --> 3
