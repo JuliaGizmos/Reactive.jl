@@ -73,19 +73,21 @@ function connect_filterwhen(output, predicate, input)
     end
 end
 
-function connect_foldp(f, v0, output, input)
+function connect_foldp(f, v0, output, inputs)
     let acc = v0
-        add_action!(input, output) do output, timestep
-            val = value(input)
-            acc = f(acc, val)
-            send_value!(output, acc, timestep)
+        for inp in inputs
+            add_action!(inp, output) do output, timestep
+                vals = map(value, inputs)
+                acc = f(acc, vals...)
+                send_value!(output, acc, timestep)
+            end
         end
     end
 end
 
-function foldp(f::Function, v0, input; typ=typeof(v0))
+function foldp(f::Function, v0, inputs...; typ=typeof(v0))
     n = Node(typ, v0)
-    connect_foldp(f, v0, n, input)
+    connect_foldp(f, v0, n, inputs)
     n
 end
 
