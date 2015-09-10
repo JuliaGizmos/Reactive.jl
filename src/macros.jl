@@ -1,14 +1,5 @@
-# evaluate as much of an expression as you can
-function sub_val(x, m::Module)
-    try
-        eval(m, x)
-    catch MethodError e
-        return x
-    end
-end
-
-sub_val(x::Symbol, m::Module) = eval(m, x)
-
+sub_val(x, m::Module) = _eval(m, x)
+sub_val(x::Symbol, m::Module) = _eval(m, x)
 function sub_val(ex::Expr, m::Module)
     if in(ex.head, [:call, :row, :vcat, :vect, :ref, :tuple, :cell1d, :(:)])
         ex.args = map(x->sub_val(x, m), ex.args)
@@ -20,15 +11,21 @@ function sub_val(ex::Expr, m::Module)
     # turned into a single signal first and then used as input
     # to the expression being lifted.
     if ex.head == :call
-        try
-            eval(m, ex)
-        catch MethodError e
-            return ex
-        end
+        _eval(m, ex)
     else
         return ex
     end
 end
+function _eval(m, x)
+    try
+        eval(m, x)
+    catch exc
+        if isa(exc, MethodError)
+            return x
+        end
+    end
+end
+
 
 function extract_signals!(ex, m::Module, dict::Dict{Any, Symbol})
     if applicable(signal, ex)
