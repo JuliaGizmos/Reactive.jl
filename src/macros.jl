@@ -1,3 +1,6 @@
+"""
+evaluate as much of an expression as you can
+"""
 sub_val(x, m::Module) = _eval(m, x)
 sub_val(x::Symbol, m::Module) = _eval(m, x)
 function sub_val(ex::Expr, m::Module)
@@ -56,13 +59,15 @@ function extract_signals(ex, m::Module)
     return ex, dict
 end
 
-# Convenience macro for calling `lift`. Evaluates an
-# expression looking for signal values, and returns a
-# signal whose values are that of the expression as the
-# signals in it change.
-#
-# Args:
-#    expr: Expression
+"""
+Convenience macro for calling `lift`. Evaluates an
+expression looking for signal values, and returns a
+signal whose values are that of the expression as the
+signals in it change.
+
+Args:
+   expr: Expression
+"""
 macro lift(ex)
     ex = Expr(:quote, ex)
     esc(quote

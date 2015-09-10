@@ -41,13 +41,17 @@ end
 
 typealias Callable Union(DataType, Function)
 
-# SignalSource is a contract that you can call signal() on the
-# value to get a Signal
+"""
+SignalSource is a contract that you can call signal() on the
+value to get a Signal
+"""
 abstract SignalSource
 
-# A `Signal{T}` is a time-varying value of type T.
-# Signal itself is a subtype of SignalSource for easy
-# dispatch (e.g. see foldl below)
+"""
+A `Signal{T}` is a time-varying value of type T.
+Signal itself is a subtype of SignalSource for easy
+dispatch (e.g. see foldl below)
+"""
 abstract Signal{T} <: SignalSource
 signal(x::Signal) = x
 
@@ -64,13 +68,18 @@ begin
     end
 end
 
-rank(x::Signal) = x.rank # topological rank
-value(x::Signal) = x.value # current value
+"topological rank"
+rank(x::Signal) = x.rank
 
-# An `Input` is a signal which can be updated explicitly by code external to Reactive.
-# All other signal types have implicit update logic.
-# `Input` signals can be updated by a call to `push!`.
-# An `Input` must be created with an initial value.
+"current value"
+value(x::Signal) = x.value
+
+"""
+An `Input` is a signal which can be updated explicitly by code external to Reactive.
+All other signal types have implicit update logic.
+`Input` signals can be updated by a call to `push!`.
+An `Input` must be created with an initial value.
+"""
 type Input{T} <: Signal{T}
     rank::Uint
     children::Vector{Signal}
@@ -82,8 +91,10 @@ type Input{T} <: Signal{T}
 end
 Input{T}(v::T) = Input{T}(v)
 
-# An intermediate node. A `Node` can be created by functions
-# in this library that return signals.
+"""
+An intermediate node. A `Node` can be created by functions
+in this library that return signals.
+"""
 abstract Node{T} <: Signal{T}
 
 #function add_child!(parents::Tuple{Vararg{Signal}}, child::Signal)
@@ -269,14 +280,17 @@ end
 
 begin
     local isupdating = false
-    # Update the value of an Input signal and propagate the
-    # change.
-    #
-    # Args:
-    #     input: An Input signal
-    #     val: The new value to be set
-    # Returns:
-    #     nothing
+
+    """
+    Update the value of an Input signal and propagate the
+    change.
+
+    Args:
+        input: An Input signal
+        val: The new value to be set
+    Returns:
+        nothing
+    """
     function push!{T}(input::Input{T}, val)
       try
           if isupdating
@@ -342,18 +356,21 @@ begin
    end
 end
 
-# The `lift` operator can be used to create a new signal from
-# existing signals. The value of the new signal will be the return
-# value of a function `f` applied to the current values of the input
-# signals.
-#
-# Args:
-#     f: The transformation function
-#     inputs...: Signals to apply `f` to. Same number as the arity of `f`.
-#     init: (kwarg) - the initial value, defaults to `f(values of inputs...)`
-#     typ: (kwarg) - the output type, defaults to typeof(init)
-# Returns:
-#     a signal which updates when an argument signal updates.
+"""
+The `lift` operator can be used to create a new signal from
+existing signals. The value of the new signal will be the return
+value of a function `f` applied to the current values of the input
+signals.
+
+Args:
+    f: The transformation function
+    inputs...: Signals to apply `f` to. Same number as the arity of `f`.
+    init: (kwarg) - the initial value, defaults to `f(values of inputs...)`
+    typ: (kwarg) - the output type, defaults to typeof(init)
+Returns:
+    a signal which updates when an argument signal updates.
+"""
+lift(args...; kwargs...) = consume(args...; kwargs...)
 
 consume(f::Callable, inputs::Signal...; init=f(map(value, inputs)...), typ=typeof(init)) =
     Lift{typ}(f, inputs, init)
@@ -361,7 +378,6 @@ consume(f::Callable, inputs::Signal...; init=f(map(value, inputs)...), typ=typeo
 consume(f::Callable, inputs::SignalSource...; kwargs...) =
     consume(f, map(signal, inputs)...; kwargs...)
 
-lift(args...; kwargs...) = consume(args...; kwargs...)
 
 typealias Try{T} Union(T, Exception)
 
@@ -387,16 +403,18 @@ const tryconsume = trylift
 #         (ss...) ⟿ f
 #     end
 
-# [Fold](http://en.wikipedia.org/wiki/Fold_(higher-order_function)) over time.
-# foldl can be used to reduce a signal updates to a signal of an accumulated value.
-#
-# Args:
-#     f: A function that takes its previously returned value as the first argument
-#        and the values of the signals as the second argument
-#     v0: initial value of the fold
-#     signals: as many signals as one less than the arity of f.
-# Returns:
-#     A signal which updates when one of the argument signals update.
+"""
+[Fold](http://en.wikipedia.org/wiki/Fold_(higher-order_function)) over time.
+foldl can be used to reduce a signal updates to a signal of an accumulated value.
+
+Args:
+    f: A function that takes its previously returned value as the first argument
+       and the values of the signals as the second argument
+    v0: initial value of the fold
+    signals: as many signals as one less than the arity of f.
+Returns:
+    A signal which updates when one of the argument signals update.
+"""
 function foldl{T}(f, v0::T, signal::SignalSource, signals::SignalSource...; typ=T)
     local a = v0
     lift((b...) -> a = f(a, b...),
@@ -409,54 +427,64 @@ function foldr{T}(f::Function, v0::T, signal::SignalSource, signals::SignalSourc
         signal, signals...; init=v0, typ=typ)
 end
 
-# Keep only updates that return true when applied to a predicate function.
-#
-# Args:
-#     pred: a function of type that returns a boolean value
-#     v0:   the value the signal should take if the predicate is not satisfied initially.
-#     s:    the signal to be filtered
-# Returns:
-#     A filtered signal
+"""
+Keep only updates that return true when applied to a predicate function.
+
+Args:
+    pred: a function of type that returns a boolean value
+    v0:   the value the signal should take if the predicate is not satisfied initially.
+    s:    the signal to be filtered
+Returns:
+    A filtered signal
+"""
 filter{T}(pred::Function, v0, s::Signal{T}) = Filter{T}(pred, v0, s)
 filter(pred::Function, v0, s::SignalSource) = filter(pred, v0, signal(s))
 
-# Drop updates when the first signal is true.
-#
-# Args:
-#     test: a Signal{Bool} which tells when to drop updates
-#     v0:   value to be used if the test signal is true initially
-#     s:    the signal to drop updates from
-# Return:
-#     a signal which updates only when the test signal is false
+"""
+Drop updates when the first signal is true.
+
+Args:
+    test: a Signal{Bool} which tells when to drop updates
+    v0:   value to be used if the test signal is true initially
+    s:    the signal to drop updates from
+Return:
+    a signal which updates only when the test signal is false
+"""
 dropwhen{T}(test::Signal{Bool}, v0, s::Signal{T}) =
     DropWhen{T}(test, v0, s)
 
-# Sample from the second signal every time an update occurs in the first signal
-#
-# Args:
-#     s1: the signal to watch for updates
-#     s2: the signal to sample from when s1 updates
-# Returns:
-#     a of the same type as s2 which updates with s1
+"""
+Sample from the second signal every time an update occurs in the first signal
+
+Args:
+    s1: the signal to watch for updates
+    s2: the signal to sample from when s1 updates
+Returns:
+    a of the same type as s2 which updates with s1
+"""
 sampleon{T, U}(s1::Signal{T}, s2::Signal{U}) = SampleOn{T, U}(s1, s2)
 sampleon(s1::SignalSource, s2::SignalSource) = sampleon(signal(s1), signal(s2))
 
-# Merge multiple signals of the same type. If more than one signals
-# update together, the first one gets precedence.
-#
-# Args:
-#     signals...: two or more signals
-# Returns:
-#     a merged signal
+"""
+Merge multiple signals of the same type. If more than one signals
+update together, the first one gets precedence.
+
+Args:
+    signals...: two or more signals
+Returns:
+    a merged signal
+"""
 merge(signals::Signal...) = Merge{join_eltype(signals...)}(signals)
 merge(signals::SignalSource...) = merge(map(signal, signals))
 
-# Drop repeated updates. To be used on signals of immutable types.
-#
-# Args:
-#     s: the signal to drop repeats from
-# Returns:
-#     a signal with repeats dropped.
+"""
+Drop repeated updates. To be used on signals of immutable types.
+
+Args:
+    s: the signal to drop repeats from
+Returns:
+    a signal with repeats dropped.
+"""
 droprepeats{T}(s::Signal{T}) = DropRepeats{T}(s)
 droprepeats(s::SignalSource) = droprepeats(signal(s))
 
@@ -464,26 +492,26 @@ function show{T}(io::IO, node::Signal{T})
     write(io, string("[$(typeof(node))] ", node.value))
 end
 
-#
-# Flatten a signal of signal into a signal
-#
-# Args:
-#    ss: the signal of signals
-# Returns:
-#    A signal
-#
+"""
+Flatten a signal of signal into a signal
+
+Args:
+   ss: the signal of signals
+Returns:
+   A signal
+"""
 flatten(ss::Signal; typ=eltype(value(ss))) =
     Flatten{typ}(ss)
 
-#
-# `switch(f, switcher)` is the same as `flatten(lift(f, switcher))`
-#
-# Args:
-#    f: A function from `T` to `Signal`
-#    switcher: A signal of type `T`
-# Returns:
-#    A flattened signal
-#
+"""
+`switch(f, switcher)` is the same as `flatten(lift(f, switcher))`
+
+Args:
+   f: A function from `T` to `Signal`
+   switcher: A signal of type `T`
+Returns:
+   A flattened signal
+"""
 switch(f, switcher; typ=eltype(switcher)) =
     flatten(lift(f, switcher), typ=typ)
 
