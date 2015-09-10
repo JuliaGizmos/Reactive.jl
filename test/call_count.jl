@@ -26,11 +26,11 @@ facts("Call counting") do
         push!(a, number())
         push!(b, number())
 
-        @fact ca.value => i
-        @fact cb.value => i
-        @fact cc.value => 2i
-        @fact cd.value => 2i
-        @fact ce.value => i
-        @fact cf.value => 2i
+        @fact ca.value --> i
+        @fact cb.value --> i
+        @fact cc.value --> 2i
+        @fact cd.value --> 2i
+        @fact ce.value --> i
+        @fact cf.value --> 2i
     end
 end
