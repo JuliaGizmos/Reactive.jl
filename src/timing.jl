@@ -8,8 +8,7 @@ export every, fpswhen, fps, timestamp
 #     a periodically updating timestamp as a signal
 function every(delta::Float64)
     i = Input(time())
-    @compat update(timer::Timer) = push!(i, time())
-    t = Timer(update, delta, delta)
+    t = @compat Timer(t->push!(i, time()), delta, delta)
     return lift(identity,  i) # prevent push!
 end
 
@@ -28,13 +27,16 @@ function gate(wason_timer::(@compat Tuple{Bool, Timer}), ison::Bool, s::Input{Fl
     (ison, timer)
 end
 function fpswhen(test::Signal{Bool}, freq)
-    cond        = test.value
     delta       = 1.0/freq
-    time_signal = Input(time())
-    timer       = cond ? Timer(x->push!(time_signal, time()), 0, delta) : Timer(identity, 1, 0) # if started with test=false, create dummy timer
-    !cond && close(timer) # immediately close timer when condition is false
-    foldl(gate, (cond, timer), test, Input(time_signal), Input(delta))
-    return foldl(-, time(), time_signal)
+    feedback    = Input(time())
+    time_signal = merge(feedback, lift(_->time(), keepwhen(test, false, test)))
+    timer       = @compat Timer(x->value(test) && push!(feedback, time()), delta)
+    state = foldl((0.0,time()), time_signal) do prev, t
+        prev_t, _ = prev
+        @compat Timer(x->value(test) && push!(feedback, time()), delta)
+        t, (t - prev_t)
+    end
+    lift(x->x[2], state)
 end
 fpswhen(test, freq) = fpswhen(signal(test), freq)
 
