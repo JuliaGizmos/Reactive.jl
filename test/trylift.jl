@@ -13,6 +13,10 @@ facts("trylift") do
         push!(x, 3)
         @fact value(y) => InexactError()
         push!(x, 4)
-        @fact value(y) => BoundsError()
+        if VERSION < v"0.4.0-dev+2374"
+            @fact value(y) => BoundsError()
+        else
+            @fact value(y) => BoundsError(m,(4,))
+        end
     end
 end
