@@ -280,7 +280,7 @@ timestamped_votes = timestamp(votes)
 Reactive is a great substrate to build interactive GUI libraries. Here are a few projects that make use of Reactive:
 
 * [Interact.jl](https://github.com/JuliaLang/Interact.jl)
-* [Escher.jl](https://github.com/JuliaLang/Interact.jl)
+* [Escher.jl](https://github.com/shashi/Escher.jl)
 * [GLPlot.jl](https://github.com/SimonDanisch/GLPlot.jl)
 
 It could also be potentially used for other projects that require any kind of event handling: controlling robots, making music or simulations.
