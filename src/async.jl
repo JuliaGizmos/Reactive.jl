@@ -4,7 +4,7 @@ export remote_map,
 
 function async_map(f, init, inputs...; typ=typeof(init))
 
-    node = Node(typ, init) 
+    node = Node(typ, init, inputs)
     map(inputs...; init=init, typ=typ) do args...
         outer_task = current_task()
         @async begin
@@ -22,7 +22,7 @@ end
 
 function remote_map(f, init, inputs...; typ=typeof(init))
 
-    node = Node(typ, init) 
+    node = Node(typ, init, inputs)
     map(inputs...; init=init, typ=typ) do args...
         outer_task = current_task()
         @async begin

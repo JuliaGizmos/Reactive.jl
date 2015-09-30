@@ -16,7 +16,7 @@ export map,
 function _map(f, inputs::Node...;
              init=f(map(value, inputs)...), typ=typeof(init))
 
-    n = Node(typ, init)
+    n = Node(typ, init, inputs)
     connect_map(f, n, inputs...)
     n
 end
@@ -56,13 +56,13 @@ function connect_filter(f, default, output, input)
 end
 
 function filter{T}(f::Function, default, input::Node{T})
-    n = Node(T, f(value(input)) ? value(input) : default)
+    n = Node(T, f(value(input)) ? value(input) : default, (input,))
     connect_filter(f, default, n, input)
     n
 end
 
 function filterwhen{T}(predicate::Node{Bool}, default, input::Node{T})
-    n = Node(T, value(predicate) ? value(input) : default)
+    n = Node(T, value(predicate) ? value(input) : default, (input,))
     connect_filterwhen(n, predicate, input)
     n
 end
@@ -86,7 +86,7 @@ function connect_foldp(f, v0, output, inputs)
 end
 
 function foldp(f::Function, v0, inputs...; typ=typeof(v0))
-    n = Node(typ, v0)
+    n = Node(typ, v0, inputs)
     connect_foldp(f, v0, n, inputs)
     n
 end
@@ -99,7 +99,7 @@ function connect_sampleon(output, sampler, input)
 end
 
 function sampleon{T}(sampler, input::Node{T})
-    n = Node(T, value(input))
+    n = Node(T, value(input), (sampler, input))
     connect_sampleon(n, sampler, input)
     n
 end
@@ -122,13 +122,13 @@ end
 
 function merge(inputs...)
     @assert length(inputs) >= 1
-    n = Node(typejoin(map(eltype, inputs)...), value(inputs[1]))
+    n = Node(typejoin(map(eltype, inputs)...), value(inputs[1]), inputs)
     connect_merge(n, inputs...)
     n
 end
 
 function previous{T}(input::Node{T}, default=value(input))
-    n = Node(T, default)
+    n = Node(T, default, (input,))
     connect_previous(n, input)
     n
 end
@@ -143,7 +143,7 @@ function connect_previous(output, input)
 end
 
 function delay{T}(input::Node{T}, default=value(input))
-    n = Node(T, default)
+    n = Node(T, default, (input,))
     connect_delay(n, input)
     n
 end
@@ -166,7 +166,7 @@ function connect_droprepeats(output, input)
 end
 
 function droprepeats{T}(input::Node{T})
-    n = Node(T, value(input))
+    n = Node(T, value(input), (input,))
     connect_droprepeats(n, input)
     n
 end
@@ -175,7 +175,7 @@ end
 function connect_flatten(output, input)
     let current_node = value(input),
         callback = (output, timestep) -> begin
-            send_value!(output, value(current_node), timestep)
+            send_value!(output, value(value(input)), timestep)
         end
 
         add_action!(callback, current_node, output)
@@ -193,7 +193,7 @@ function connect_flatten(output, input)
 end
 
 function flatten(input::Node; typ=Any)
-    n = Node(typ, value(value(input)))
+    n = Node(typ, value(value(input)), (input,))
     connect_flatten(n, input)
     n
 end

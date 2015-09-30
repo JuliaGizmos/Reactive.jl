@@ -11,11 +11,12 @@ isrequired(a::Action) = a.recipient.value != nothing && a.recipient.value.alive
 
 type Node{T}
     value::T
+    parents::Tuple
     actions::Vector{Action}
     alive::Bool
 end
-Node(x) = Node(x, Action[], true)
-Node{T}(::Type{T}, x) = Node{T}(x, Action[], true)
+Node(x, parents=()) = Node(x, parents, Action[], true)
+Node{T}(::Type{T}, x, parents=()) = Node{T}(x, parents, Action[], true)
 
 # preserve/unpreserve nodes from gc
 const _nodes = ObjectIdDict()

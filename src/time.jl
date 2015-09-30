@@ -14,13 +14,13 @@ function throttle_connect(dt, output, input, f, init, reinit)
 end
 
 function throttle{T}(dt, node::Node{T}, f=(acc, x) -> x, init=value(node), reinit=x->x)
-    output = Node(init)
+    output = Node(init, (node,))
     throttle_connect(dt, output, node, f, init, reinit)
     output
 end
 
 function every(dt)
-    n = Node(time())
+    n = Node(time(), ())
     every_connect(dt, n)
     n
 end
@@ -51,10 +51,10 @@ function fpswhen_connect(rate, switch, output)
 end
 
 function fpswhen(switch, rate)
-    n = Node(Float64, 0.0)
+    n = Node(Float64, 0.0, (switch,))
     fpswhen_connect(rate, switch, n)
     n
 end
 
-fps(rate) = fpswhen(Node(true), rate)
+fps(rate) = fpswhen(Node(Bool, true, ()), rate)
 
