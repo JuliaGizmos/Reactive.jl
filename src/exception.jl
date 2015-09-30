@@ -42,5 +42,5 @@ Base.show(io::IO, rex::ReactiveException) = begin
     end
 
     println(io)
-    show(io, rex.exception)
+    showerror(io, rex.exception)
 end
