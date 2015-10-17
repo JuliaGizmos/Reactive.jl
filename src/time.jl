@@ -1,5 +1,3 @@
-using Compat
-
 export every, fps, fpswhen, throttle
 
 # Aggregate a signal producing an update at most once in dt seconds

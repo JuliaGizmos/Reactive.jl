@@ -1,5 +1,7 @@
 module Reactive
 
+using Compat
+
 include("core.jl")
 include("operators.jl")
 include("async.jl")
