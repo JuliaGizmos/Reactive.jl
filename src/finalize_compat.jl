@@ -1,6 +1,6 @@
 const _node_finalizers = WeakKeyDict()
 
-typealias Finalizer Union(Ptr, Function)
+typealias Finalizer @compat Union{Ptr, Function}
 
 const _finalizer = Base.finalizer
 finalizer(x::Node, f::Finalizer) = begin
