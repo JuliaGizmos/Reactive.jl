@@ -377,6 +377,12 @@ trylift(f::Callable, typ::Type, inputs...;
     lift(wraptrycatch(typ, f), inputs...; init=init, typ=Try{typ})
 const tryconsume = trylift
 
+makesignal(s::Signal) = s
+makesignal(v) = Input(v)
+function lift(f::Callable, inputs...)
+    lift(f, map(makesignal, inputs)...)
+end
+
 # Uncomment in Julia >= 0.3 to enable cute infix operators.
 #     ⟿(signals::(Any...), f::Callable) = lift(f, signals...)
 #     ⟿(signal, f::Callable) = lift(f, signal)
