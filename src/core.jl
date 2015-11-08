@@ -9,13 +9,41 @@ immutable Action
 end
 isrequired(a::Action) = a.recipient.value != nothing && a.recipient.value.alive
 
-type Node{T}
-    value::T
-    parents::Tuple
-    actions::Vector{Action}
-    alive::Bool
+const debug_memory = true
+
+const io_lock = ReentrantLock()
+
+log_gc(n) =
+    @async begin
+        lock(io_lock)
+        Base.show_backtrace(STDOUT, n.bt)
+        println(STDOUT)
+        unlock(io_lock)
+    end
+
+if !debug_memory
+    type Node{T}
+        value::T
+        parents::Tuple
+        actions::Vector{Action}
+        alive::Bool
+    end
+else
+    type Node{T}
+        value::T
+        parents::Tuple
+        actions::Vector{Action}
+        alive::Bool
+        bt
+        function Node(v, parents, actions, alive)
+            n=new(v,parents,actions,alive,backtrace())
+            finalizer(n, log_gc)
+            n
+        end
+    end
 end
-Node(x, parents=()) = Node(x, parents, Action[], true)
+
+Node{T}(x::T, parents=()) = Node{T}(x, parents, Action[], true)
 Node{T}(::Type{T}, x, parents=()) = Node{T}(x, parents, Action[], true)
 
 # preserve/unpreserve nodes from gc
