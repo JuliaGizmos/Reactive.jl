@@ -31,11 +31,11 @@ function every_connect(dt, output)
     output
 end
 
-function fpswhen_connect(rate, switch, output)
+function fpswhen_connect(rate, switch, switch_ticks, output)
     let prev_time = time(),
         dt = 1.0/rate # minimum dt
 
-        for inp in [output, filter(x->x, false, switch)]
+        for inp in [output, switch_ticks]
             add_action!(inp, output) do output, timestep
                 start_time = time()
                 value(switch) && @compat Timer(x -> begin
@@ -51,8 +51,9 @@ function fpswhen_connect(rate, switch, output)
 end
 
 function fpswhen(switch, rate)
-    n = Node(Float64, 0.0, (switch,))
-    fpswhen_connect(rate, switch, n)
+    switch_ticks = filter(x->x, false, switch)
+    n = Node(Float64, 0.0, (switch_ticks,))
+    fpswhen_connect(rate, switch, switch_ticks, n)
     n
 end
 
