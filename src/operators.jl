@@ -22,7 +22,7 @@ function _map(f, inputs::Node...;
 end
 
 # julia 0.3 loses it if this method doesn't exist
-map(f::Union(Function, DataType), inputs::Node...; kwargs...) =
+map(f::Union{Function, DataType}, inputs::Node...; kwargs...) =
     _map(f, inputs...; kwargs...)
 
 map(f, inputs::Node...; kwargs...) =

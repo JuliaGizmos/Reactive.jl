@@ -48,7 +48,7 @@ Node{T}(::Type{T}, x, parents=()) = Node{T}(x, parents, Action[], true)
 
 # preserve/unpreserve nodes from gc
 const _nodes = ObjectIdDict()
-preserve(x::Node) = _nodes[x] = (get(_nodes,x,0)+1; x)
+preserve(x::Node) = (_nodes[x] = get(_nodes,x,0)+1; x)
 function unpreserve(x::Node)
     v = _nodes[x]
     v == 1 ? pop!(_nodes,x) : (_nodes[x] = v-1)
