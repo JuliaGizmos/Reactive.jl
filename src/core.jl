@@ -3,21 +3,17 @@ export Signal, Input, Node, push!, value, close
 
 ##### Node #####
 
-immutable Action
-    recipient::WeakRef
-    f::Function
-end
-isrequired(a::Action) = a.recipient.value != nothing && a.recipient.value.alive
-
 const debug_memory = true
 
+const nodes = WeakKeyDict()
 const io_lock = ReentrantLock()
 
 log_gc(n) =
     @async begin
         lock(io_lock)
-        Base.show_backtrace(STDOUT, n.bt)
-        println(STDOUT)
+        println(STDERR, "Node got gc'd. Creation backtrace:")
+        Base.show_backtrace(STDERR, n.bt)
+        println(STDERR)
         unlock(io_lock)
     end
 
@@ -32,16 +28,23 @@ else
     type Node{T}
         value::T
         parents::Tuple
-        actions::Vector{Action}
+        actions::Vector
         alive::Bool
         bt
         function Node(v, parents, actions, alive)
             n=new(v,parents,actions,alive,backtrace())
+            nodes[n] = nothing
             finalizer(n, log_gc)
             n
         end
     end
 end
+
+immutable Action
+    recipient::Node
+    f::Function
+end
+isrequired(a::Action) = a.recipient.alive
 
 Node{T}(x::T, parents=()) = Node{T}(x, parents, Action[], true)
 Node{T}(::Type{T}, x, parents=()) = Node{T}(x, parents, Action[], true)
@@ -68,7 +71,7 @@ eltype{T}(::Type{Node{T}}) = T
 ##### Connections #####
  
 function add_action!(f, node, recipient)
-    push!(node.actions, Action(WeakRef(recipient), f))
+    push!(node.actions, Action(recipient, f))
 end
 
 function remove_action!(f, node, recipient)
@@ -101,7 +104,7 @@ function send_value!(node, x, timestep)
 end
 
 do_action(a::Action, timestep) =
-    isrequired(a) && a.f(a.recipient.value, timestep)
+    isrequired(a) && a.f(a.recipient, timestep)
 
 # If any actions have been gc'd, remove them
 cleanup_actions(node::Node) =
