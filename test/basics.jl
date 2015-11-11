@@ -171,7 +171,7 @@ facts("Basic checks") do
     context("push! inside push!") do
         a = Input(0)
         b = Input(1)
-        foreach(x -> push!(a, x), b)
+        map(x -> push!(a, x), b)
 
         @fact value(a) --> 0
 

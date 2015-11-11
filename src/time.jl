@@ -2,11 +2,11 @@ export every, fps, fpswhen, throttle
 
 # Aggregate a signal producing an update at most once in dt seconds
 function throttle_connect(dt, output, input, f, init, reinit)
-    let collected = init, timer = @compat Timer(x->x, 0)
+    let collected = init, timer = Timer(x->x, 0)
         add_action!(input, output) do output, timestep
             collected = f(collected,  value(input))
             close(timer)
-            timer = @compat Timer(x -> begin push!(output, collected); collected=reinit(collected) end, dt)
+            timer = Timer(x -> begin push!(output, collected); collected=reinit(collected) end, dt)
         end
     end
 end
@@ -29,13 +29,13 @@ end
 
 function every_connect(dt, output)
     outputref = WeakRef(output)
-    timer = @compat Timer(x -> weakrefdo(outputref, x->push!(x, time()), ()->close(timer)), dt, dt)
+    timer = Timer(x -> weakrefdo(outputref, x->push!(x, time()), ()->close(timer)), dt, dt)
     finalizer(output, _->close(timer))
     output
 end
 
 function setup_next_tick(outputref, switchref, dt, wait_dt)
-    weakrefdo(switchref, value, ()->false) && @compat Timer(t -> begin
+    weakrefdo(switchref, value, ()->false) && Timer(t -> begin
         weakrefdo(switchref, value, ()->false) &&
             weakrefdo(outputref, x -> push!(x, dt))
     end, wait_dt)

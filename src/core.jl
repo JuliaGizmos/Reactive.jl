@@ -3,25 +3,16 @@ export Signal, Input, Node, push!, value, close
 
 ##### Node #####
 
-const debug_memory = true
+const debug_memory = false # Set this to true to debug gc of nodes
 
 const nodes = WeakKeyDict()
 const io_lock = ReentrantLock()
-
-log_gc(n) =
-    @async begin
-        lock(io_lock)
-        println(STDERR, "Node got gc'd. Creation backtrace:")
-        Base.show_backtrace(STDERR, n.bt)
-        println(STDERR)
-        unlock(io_lock)
-    end
 
 if !debug_memory
     type Node{T}
         value::T
         parents::Tuple
-        actions::Vector{Action}
+        actions::Vector
         alive::Bool
     end
 else
@@ -39,6 +30,15 @@ else
         end
     end
 end
+
+log_gc(n) =
+    @async begin
+        lock(io_lock)
+        print(STDERR, "Node got gc'd. Creation backtrace:")
+        Base.show_backtrace(STDERR, n.bt)
+        println(STDOUT)
+        unlock(io_lock)
+    end
 
 immutable Action
     recipient::Node
@@ -76,10 +76,6 @@ end
 
 function remove_action!(f, node, recipient)
     node.actions = filter(a -> a.f != f, node.actions)
-end
-
-if VERSION < v"0.4.0-dev"
-    include("finalize_compat.jl")
 end
 
 function close(n::Node, warn_nonleaf=true)

@@ -1,17 +1,3 @@
- 
-if VERSION < v"0.4.0-dev"
-    # Note: The one in 0.4 is slightly better
-    type CapturedException
-        ex
-        bt
-    end
-
-    Base.show(io::IO, exp::CapturedException) = begin
-        showerror(io, exp.ex)
-        Base.show_backtrace(io, exp.bt)
-    end
-end
-
 type ReactiveException <: Exception
     waiting::Bool
     node::Node

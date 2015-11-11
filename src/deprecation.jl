@@ -2,7 +2,7 @@ import Base: consume, foldl, call, @deprecate
 export lift, consume, foldl, keepwhen, keepif, dropif, dropwhen
 
 @deprecate lift(f, s::Signal...; kwargs...) map(f,s...; kwargs...)
-@deprecate consume(f::@compat(Union{Function, DataType}), s::Signal...;kwargs...) map(f, s...;kwargs...)
+@deprecate consume(f::Union{Function, DataType}, s::Signal...;kwargs...) map(f, s...;kwargs...)
 @deprecate foldl(f, x, s::Signal...;kwargs...) foldp(f, x, s...;kwargs...)
 @deprecate keepwhen filterwhen
 @deprecate keepif filter

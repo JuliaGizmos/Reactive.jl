@@ -1,7 +1,6 @@
 import Base: map, merge, filter
 
 export map,
-       foreach,
        probe,
        filter, 
        filterwhen,
@@ -13,20 +12,13 @@ export map,
        droprepeats,
        flatten
 
-function _map(f, inputs::Node...;
+function map(f, inputs::Node...;
              init=f(map(value, inputs)...), typ=typeof(init))
 
     n = Node(typ, init, inputs)
     connect_map(f, n, inputs...)
     n
 end
-
-# julia 0.3 loses it if this method doesn't exist
-map(f::@compat(Union{Function, DataType}), inputs::Node...; kwargs...) =
-    _map(f, inputs...; kwargs...)
-
-map(f, inputs::Node...; kwargs...) =
-    _map(f, inputs...; kwargs...)
 
 function connect_map(f, output, inputs...)
     let prev_timestep = 0
@@ -41,9 +33,6 @@ function connect_map(f, output, inputs...)
         end
     end
 end
-
-foreach(f, inputs...; kwargs...) =
-    preserve(map(f, inputs...; kwargs...))
 
 probe(node, name, io=STDERR) =
     map(x -> println(io, name, " >! ", x), node)
