@@ -71,7 +71,7 @@ facts("Timing functions") do
         y = throttle(0.1, x)
         y′ = throttle(0.2, x, push!, Int[], x->Int[]) # collect intermediate updates
         z = foldp((acc, x) -> acc+1, 0, y)
-        z′ = foldp((acc, x) -> acc+1, 0, y)
+        z′ = foldp((acc, x) -> acc+1, 0, y′)
 
         push!(x, 1)
         step()

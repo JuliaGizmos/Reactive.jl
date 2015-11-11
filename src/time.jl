@@ -23,35 +23,47 @@ function every(dt)
     n
 end
 
+function weakrefdo(ref, yes, no=()->nothing)
+    ref.value != nothing ? yes(ref.value) : no()
+end
+
 function every_connect(dt, output)
-    timer = @compat Timer(x -> push!(output, time()), dt, dt)
-    finalizer(output, x -> close(timer))
+    outputref = WeakRef(output)
+    timer = @compat Timer(x -> weakrefdo(outputref, x->push!(x, time()), ()->close(timer)), dt, dt)
+    finalizer(output, _->close(timer))
     output
 end
 
-function fpswhen_connect(rate, switch, switch_ticks, output)
+function setup_next_tick(outputref, switchref, dt, wait_dt)
+    weakrefdo(switchref, value, ()->false) && @compat Timer(t -> begin
+        weakrefdo(switchref, value, ()->false) &&
+            weakrefdo(outputref, x -> push!(x, dt))
+    end, wait_dt)
+end
+
+function fpswhen_connect(rate, switch, output)
     let prev_time = time(),
-        dt = 1.0/rate # minimum dt
+        dt = 1.0/rate,
+        outputref = WeakRef(output)
+        switchref = WeakRef(switch)
+        switch_ticks = filter(x->x, false, switch) # only turn-ons
+
 
         for inp in [output, switch_ticks]
             add_action!(inp, output) do output, timestep
                 start_time = time()
-                value(switch) && @compat Timer(x -> begin
-                    value(switch) && push!(output, time() - prev_time)
-                end, dt)
+                setup_next_tick(outputref, switchref, time()-prev_time, dt)
                 prev_time = start_time
             end
         end
 
-        value(switch) &&
-            @compat Timer(x -> value(switch) && push!(output, time() - prev_time), dt)
+        setup_next_tick(outputref, switchref, dt, dt)
     end
 end
 
 function fpswhen(switch, rate)
-    switch_ticks = filter(x->x, false, switch)
-    n = Node(Float64, 0.0, (switch_ticks,))
-    fpswhen_connect(rate, switch, switch_ticks, n)
+    n = Node(Float64, 0.0, (switch,))
+    fpswhen_connect(rate, switch, n)
     n
 end
 
