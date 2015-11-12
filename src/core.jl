@@ -63,13 +63,13 @@ typealias Input Node
 
 Base.show(io::IO, n::Node) =
     write(io, "Node{$(eltype(n))}($(n.value), nactions=$(length(n.actions))$(n.alive ? "" : ", closed"))")
- 
+
 value(n::Node) = n.value
 eltype{T}(::Node{T}) = T
 eltype{T}(::Type{Node{T}}) = T
 
 ##### Connections #####
- 
+
 function add_action!(f, node, recipient)
     a = Action(recipient, f)
     push!(node.actions, a)
@@ -90,7 +90,7 @@ function close(n::Node, warn_nonleaf=true)
     end
 end
 
-function send_value!(node, x, timestep)
+function send_value!(node::Node, x, timestep)
     # Dead node?
     !node.alive && return
 
@@ -100,6 +100,7 @@ function send_value!(node, x, timestep)
         do_action(action, timestep)
     end
 end
+send_value!(wr::WeakRef, x, timestep) = send_value!(wr.value, x, timestep)
 
 do_action(a::Action, timestep) =
     isrequired(a) && a.f(a.recipient, timestep)
@@ -117,7 +118,9 @@ const CHANNEL_SIZE = 1024
 const _messages = Channel{Any}(CHANNEL_SIZE)
 
 # queue an update. meta comes back in a ReactiveException if there is an error
-function Base.push!(n::Node, x, onerror=print_error)
+Base.push!(n::Node, x, onerror=print_error) = _push!(n, x, onerror)
+
+function _push!(n, x, onerror=print_error)
     taken = Base.n_avail(_messages)
     if taken >= CHANNEL_SIZE
         warn("Message queue is full. Ordering may be incorrect.")
