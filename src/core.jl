@@ -147,6 +147,7 @@ let timestep = 0
                 waiting = false
 
                 send_value!(node, value, timestep)
+                node = nothing
             end
         catch err
             if isa(err, InterruptException)

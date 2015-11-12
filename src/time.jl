@@ -37,6 +37,10 @@ function setup_next_tick(outputref, switchref, dt, wait_dt)
     end, wait_dt)
 end
 
+function weakrefdo(ref, yes, no=()->nothing)
+    ref.value != nothing ? yes(ref.value) : no()
+end
+
 function fpswhen_connect(rate, switch, output)
     let prev_time = time(),
         dt = 1.0/rate,

@@ -3,7 +3,7 @@ using Reactive
 using Compat
 
 step() = Reactive.run(1)
-queue_size() = Reactive.queue_size(Reactive._messages)
+queue_size() = Base.n_avail(Reactive._messages)
 number() = round(Int, rand()*1000)
 
 ## Basics
@@ -23,8 +23,8 @@ facts("Basic checks") do
         step()
         @fact value(b) --> 1
         # InexactError to be precise
-        push!(a, 2.1)
-        @fact_throws step()
+        push!(a, 2.1, (n,x,err) -> @fact n --> a)
+        step()
 
         @fact value(b) --> 1
 
