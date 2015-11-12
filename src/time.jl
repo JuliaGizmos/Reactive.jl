@@ -23,13 +23,9 @@ function every(dt)
     n
 end
 
-function weakrefdo(ref, yes, no=()->nothing)
-    ref.value != nothing ? yes(ref.value) : no()
-end
-
 function every_connect(dt, output)
     outputref = WeakRef(output)
-    timer = Timer(x -> weakrefdo(outputref, x->push!(x, time()), ()->close(timer)), dt, dt)
+    timer = Timer(x -> _push!(outputref, time(), ()->close(timer)), dt, dt)
     finalizer(output, _->close(timer))
     output
 end
@@ -68,4 +64,3 @@ function fpswhen(switch, rate)
 end
 
 fps(rate) = fpswhen(Node(Bool, true, ()), rate)
-
