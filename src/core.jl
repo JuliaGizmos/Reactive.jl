@@ -71,7 +71,9 @@ eltype{T}(::Type{Node{T}}) = T
 ##### Connections #####
  
 function add_action!(f, node, recipient)
-    push!(node.actions, Action(recipient, f))
+    a = Action(recipient, f)
+    push!(node.actions, a)
+    a
 end
 
 function remove_action!(f, node, recipient)

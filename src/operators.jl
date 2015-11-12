@@ -10,7 +10,9 @@ export map,
        previous,
        delay,
        droprepeats,
-       flatten
+       flatten,
+       bind!,
+       unbind!
 
 function map(f, inputs::Node...;
              init=f(map(value, inputs)...), typ=typeof(init))
@@ -185,4 +187,37 @@ function flatten(input::Node; typ=Any)
     n = Node(typ, value(value(input)), (input,))
     connect_flatten(n, input)
     n
+end
+
+const _bindings = Dict()
+
+function bind!(a::Node, b::Node, twoway=true)
+
+    let current_timestep = 0
+        action = add_action!(a, b) do b, timestep
+            if current_timestep != timestep
+                current_timestep = timestep
+                send_value!(b, value(a), timestep)
+            end
+        end
+        _bindings[a=>b] = action
+    end
+
+    if twoway
+        bind!(b, a, false)
+    end
+end
+
+function unbind!(a::Node, b::Node, twoway=true)
+    if !haskey(_bindings, a=>b)
+        return
+    end
+
+    action = _bindings[a=>b]
+    a.actions = filter(x->x!=action, a.actions)
+    delete!(_bindings, a=>b)
+
+    if twoway
+        unbind!(b, a, false)
+    end
 end
