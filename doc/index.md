@@ -285,6 +285,8 @@ Reactive is a great substrate to build interactive GUI libraries. Here are a few
 
 It could also be potentially used for other projects that require any kind of event handling: controlling robots, making music or simulations.
 
+See also a set of [experiments using Reactive for drawing control](imageview_warmups.md).
+
 # Reporting Bugs
 
 Let me know about any bugs, counterintuitive behavior, or enhancements you'd like by [filing a bug](https://github.com/shashi/Reactive.jl/issues/new) on github.
