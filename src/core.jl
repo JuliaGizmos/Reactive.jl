@@ -1,5 +1,5 @@
 import Base: push!, eltype, close
-export Signal, Input, Node, push!, value, close
+export Signal, push!, value, close
 
 ##### Node #####
 
@@ -31,6 +31,8 @@ else
     end
 end
 
+typealias Signal Node
+
 log_gc(n) =
     @async begin
         lock(io_lock)
@@ -58,11 +60,8 @@ function unpreserve(x::Node)
     nothing
 end
 
-typealias Signal Node
-typealias Input Node
-
 Base.show(io::IO, n::Node) =
-    write(io, "Node{$(eltype(n))}($(n.value), nactions=$(length(n.actions))$(n.alive ? "" : ", closed"))")
+    write(io, "Signal{$(eltype(n))}($(n.value), nactions=$(length(n.actions))$(n.alive ? "" : ", closed"))")
 
 value(n::Node) = n.value
 value(::Void) = false
