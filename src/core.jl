@@ -65,6 +65,7 @@ Base.show(io::IO, n::Node) =
     write(io, "Node{$(eltype(n))}($(n.value), nactions=$(length(n.actions))$(n.alive ? "" : ", closed"))")
 
 value(n::Node) = n.value
+value(::Void) = false
 eltype{T}(::Node{T}) = T
 eltype{T}(::Type{Node{T}}) = T
 
@@ -130,6 +131,7 @@ function _push!(n, x, onerror=print_error)
     end
     nothing
 end
+_push!(::Void, x, onerror=print_error) = nothing
 
 # remove messages from the channel and propagate them
 global run
