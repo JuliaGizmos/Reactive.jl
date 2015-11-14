@@ -117,7 +117,19 @@ const CHANNEL_SIZE = 1024
 # Global channel for signal updates
 const _messages = Channel{Any}(CHANNEL_SIZE)
 
-# queue an update. meta comes back in a ReactiveException if there is an error
+"""
+`push!(signal, value, onerror=Reactive.print_error)`
+
+Queue an update to a signal. The update will be propagated when all currently
+queued updates are done processing.
+
+The third optional argument is a callback to be called in case the update
+ends in an error. The callback receives 3 arguments: the signal, the value,
+and a `CapturedException` with the fields `ex` which is the original exception
+object, and `processed_bt` which is the backtrace of the exception.
+
+The default error callback will print the error and backtrace to STDERR.
+"""
 Base.push!(n::Node, x, onerror=print_error) = _push!(n, x, onerror)
 
 function _push!(n, x, onerror=print_error)
@@ -147,7 +159,6 @@ let timestep = 0
                 waiting = false
 
                 send_value!(node, value, timestep)
-                node = nothing
             end
         catch err
             if isa(err, InterruptException)
