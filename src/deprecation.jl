@@ -1,7 +1,7 @@
-import Base: consume, foldl, call, @deprecate
+import Base: consume, foldl, call, @deprecate, @deprecate_binding
 export lift, consume, foldl, keepwhen, keepif, dropif, dropwhen
 
-@deprecate Input Signal
+@deprecate_binding Input Signal
 
 @deprecate lift(f, s::Signal...; kwargs...) map(f,s...; kwargs...)
 @deprecate consume(f::Union{Function, DataType}, s::Signal...;kwargs...) map(f, s...;kwargs...)
