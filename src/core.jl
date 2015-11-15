@@ -164,7 +164,7 @@ function _push!(n, x, onerror=print_error)
         warn("Message queue is full. Ordering may be incorrect.")
         @async put!(_messages, (n, x, onerror))
     else
-        put!(_messages, (n, x, onerror))
+        put!(_messages, (WeakRef(n), x, onerror))
     end
     nothing
 end
@@ -175,25 +175,24 @@ global run
 let timestep = 0
     function run(steps=typemax(Int))
         runner_task = current_task()::Task
-        local waiting, node, value, onerror, iter = 1
-        try
-            while iter <= steps
-                timestep += 1
-                iter += 1
+        iter = 1
+        while iter <= steps
+            timestep += 1
+            iter += 1
 
-                waiting = true
-                (node, value, onerror) = take!(_messages)
-                waiting = false
-
-                send_value!(node, value, timestep)
-            end
-        catch err
-            if isa(err, InterruptException)
-                println("Reactive event loop was inturrupted.")
-                rethrow()
-            else
-                bt = catch_backtrace()
-                onerror(node, value, CapturedException(err, bt))
+            let message = take!(_messages)
+                node, value, onerror = message
+                try
+                    send_value!(node, value, timestep)
+                catch err
+                    if isa(err, InterruptException)
+                        println("Reactive event loop was inturrupted.")
+                        rethrow()
+                    else
+                        bt = catch_backtrace()
+                        onerror(node, value, CapturedException(err, bt))
+                    end
+                end
             end
         end
     end
