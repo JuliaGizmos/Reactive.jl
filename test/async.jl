@@ -2,7 +2,7 @@
 facts("Async") do
 
     context("async_map") do
-        x = Input(1)
+        x = Signal(1)
         t, y = async_map(-, 0, x)
 
         @fact value(t) --> nothing

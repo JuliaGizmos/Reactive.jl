@@ -2,8 +2,8 @@
 number() = rand(0:100)
 
 facts("Call counting") do
-    a = Input(0)
-    b = Input(0)
+    a = Signal(0)
+    b = Signal(0)
 
     c = map(+, a, b)
     d = merge(a, b)

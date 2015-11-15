@@ -3,10 +3,10 @@ using Reactive
 
 facts("Flatten") do
 
-    a = Input(0)
-    b = Input(1)
+    a = Signal(0)
+    b = Signal(1)
 
-    c = Input(a)
+    c = Signal(a)
 
     d = flatten(c)
     cnt = foldp((x, y) -> x+1, 0, d)

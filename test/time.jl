@@ -2,7 +2,7 @@
 facts("Timing functions") do
 
     context("fpswhen") do
-        b = Input(false)
+        b = Signal(false)
         t = fpswhen(b, 10)
         acc = foldp((x, y) -> x+1, 0, t)
         sleep(0.14)
@@ -67,7 +67,7 @@ facts("Timing functions") do
     end
 
     context("throttle") do
-        x = Input(0)
+        x = Signal(0)
         y = throttle(0.1, x)
         y′ = throttle(0.2, x, push!, Int[], x->Int[]) # collect intermediate updates
         z = foldp((acc, x) -> acc+1, 0, y)

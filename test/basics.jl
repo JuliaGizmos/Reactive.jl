@@ -10,7 +10,7 @@ number() = round(Int, rand()*1000)
 
 facts("Basic checks") do
 
-    a = Input(number())
+    a = Signal(number())
     b = map(x -> x*x, a)
 
     context("map") do
@@ -53,7 +53,7 @@ facts("Basic checks") do
     context("merge") do
 
         ## Merge
-        d = Input(number())
+        d = Signal(number())
         e = merge(d, b, a)
 
         # precedence to d
@@ -85,7 +85,7 @@ facts("Basic checks") do
 
     context("filter") do
         # filter
-        g = Input(0)
+        g = Signal(0)
         pred = x -> x % 2 != 0
         h = filter(pred, 1, g)
         j = filter(x -> x % 2 == 0, 1, g)
@@ -104,11 +104,11 @@ facts("Basic checks") do
 
     context("sampleon") do
         # sampleon
-        g = Input(0)
+        g = Signal(0)
 
         push!(g, number())
         step()
-        i = Input(true)
+        i = Signal(true)
         j = sampleon(i, g)
         # default value
         @fact value(j) --> value(g)
@@ -124,7 +124,7 @@ facts("Basic checks") do
         # droprepeats
         count = s -> foldp((x, y) -> x+1, 0, s)
 
-        k = Input(1)
+        k = Signal(1)
         l = droprepeats(k)
 
         @fact value(l) --> value(k)
@@ -148,8 +148,8 @@ facts("Basic checks") do
 
     context("filterwhen") do
         # filterwhen
-        b = Input(false)
-        n = Input(1)
+        b = Signal(false)
+        n = Signal(1)
         dw = filterwhen(b, 0, n)
         @fact value(dw) --> 0
         push!(n, 2)
@@ -169,8 +169,8 @@ facts("Basic checks") do
     end
 
     context("push! inside push!") do
-        a = Input(0)
-        b = Input(1)
+        a = Signal(0)
+        b = Signal(1)
         map(x -> push!(a, x), b)
 
         @fact value(a) --> 0
@@ -193,7 +193,7 @@ facts("Basic checks") do
     end
 
     context("previous") do
-        x = Input(0)
+        x = Signal(0)
         y = previous(x)
         @fact value(y) --> 0
 
@@ -216,7 +216,7 @@ facts("Basic checks") do
 
 
     context("delay") do
-        x = Input(0)
+        x = Signal(0)
         y = delay(x)
         @fact value(y) --> 0
 
