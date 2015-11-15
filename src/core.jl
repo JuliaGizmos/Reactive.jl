@@ -1,5 +1,5 @@
 import Base: push!, eltype, close
-export Signal, push!, value, close
+export Signal, push!, value, preserve, unpreserve, close
 
 ##### Node #####
 
@@ -14,6 +14,7 @@ if !debug_memory
         parents::Tuple
         actions::Vector
         alive::Bool
+        preservers::Dict
     end
 else
     type Node{T}
@@ -21,9 +22,10 @@ else
         parents::Tuple
         actions::Vector
         alive::Bool
+        preservers::Dict
         bt
-        function Node(v, parents, actions, alive)
-            n=new(v,parents,actions,alive,backtrace())
+        function Node(v, parents, actions, alive, pres)
+            n=new(v,parents,actions,alive,pres,backtrace())
             nodes[n] = nothing
             finalizer(n, log_gc)
             n
@@ -43,21 +45,43 @@ log_gc(n) =
     end
 
 immutable Action
-    recipient::Node
+    recipient::WeakRef
     f::Function
 end
-isrequired(a::Action) = a.recipient.alive
+isrequired(a::Action) = a.recipient.value != nothing && a.recipient.value.alive
 
-Node{T}(x::T, parents=()) = Node{T}(x, parents, Action[], true)
-Node{T}(::Type{T}, x, parents=()) = Node{T}(x, parents, Action[], true)
+Node{T}(x::T, parents=()) = Node{T}(x, parents, Action[], true, Dict{Node, Int}())
+Node{T}(::Type{T}, x, parents=()) = Node{T}(x, parents, Action[], true, Dict{Node, Int}())
 
 # preserve/unpreserve nodes from gc
-const _nodes = ObjectIdDict()
-preserve(x::Node) = (_nodes[x] = get(_nodes,x,0)+1; x)
+"""
+    preserve(signal::Signal)
+
+prevents `signal` from being garbage collected as long as any of its parents are around. Useful for when you want to do some side effects in a signal.
+e.g. `preserve(map(println, x))` - this will continue to print updates to x, until x goes out of scope. `foreach` is a shorthand for `map` with `preserve`.
+"""
+function preserve(x::Node)
+    for p in x.parents
+        p.preservers[x] = get(p.preservers, x, 0)+1
+    end
+    x
+end
+
+"""
+    unpreserve(signal::Signal)
+
+allow `signal` to be garbage collected. See also `preserve`.
+"""
 function unpreserve(x::Node)
-    v = _nodes[x]
-    v == 1 ? pop!(_nodes,x) : (_nodes[x] = v-1)
-    nothing
+    for p in x.parents
+        n = get(p.preservers, x, 0)-1
+        if n <= 0
+            delete!(p.preservers, x)
+        else
+            p.preservers[x] = n
+        end
+    end
+    x
 end
 
 Base.show(io::IO, n::Node) =
@@ -71,7 +95,7 @@ eltype{T}(::Type{Node{T}}) = T
 ##### Connections #####
 
 function add_action!(f, node, recipient)
-    a = Action(recipient, f)
+    a = Action(WeakRef(recipient), f)
     push!(node.actions, a)
     a
 end
@@ -100,10 +124,10 @@ function send_value!(node::Node, x, timestep)
         do_action(action, timestep)
     end
 end
-send_value!(wr::WeakRef, x, timestep) = send_value!(wr.value, x, timestep)
+send_value!(wr::WeakRef, x, timestep) = wr.value != nothing && send_value!(wr.value, x, timestep)
 
 do_action(a::Action, timestep) =
-    isrequired(a) && a.f(a.recipient, timestep)
+    isrequired(a) && a.f(a.recipient.value, timestep)
 
 # If any actions have been gc'd, remove them
 cleanup_actions(node::Node) =

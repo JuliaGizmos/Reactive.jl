@@ -50,11 +50,12 @@ end
 """
     fpswhen(switch, rate)
 
-returns a signal which when `switch` signal is true, update `rate` times a second. If `rate` is not possible to attain because of slowness in computing dependent signal values, the signal will self adjust to provide the best possible rate.
+returns a signal which when `switch` signal is true, updates `rate` times every second. If `rate` is not possible to attain because of slowness in computing dependent signal values, the signal will self adjust to provide the best possible rate.
 """
 function fpswhen(switch, rate)
-    n = Node(Float64, 0.0, (switch,))
-    fpswhen_connect(rate, switch, n)
+    switch_ons = filter(x->x, false, switch) # only turn-ons
+    n = Node(Float64, 0.0, (switch, switch_ons,))
+    fpswhen_connect(rate, switch, switch_ons, n)
     n
 end
 
@@ -66,15 +67,13 @@ function setup_next_tick(outputref, switchref, dt, wait_dt)
     end
 end
 
-function fpswhen_connect(rate, switch, output)
+function fpswhen_connect(rate, switch, switch_ons, output)
     let prev_time = time()
         dt = 1.0/rate
         outputref = WeakRef(output)
         switchref = WeakRef(switch)
-        switch_ticks = filter(x->x, false, switch) # only turn-ons
 
-
-        for inp in [output, switch_ticks]
+        for inp in [output, switch_ons]
             add_action!(inp, output) do output, timestep
                 start_time = time()
                 setup_next_tick(outputref, switchref, start_time-prev_time, dt)

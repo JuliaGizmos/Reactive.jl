@@ -45,6 +45,13 @@ probe(node, name, io=STDERR) =
     map(x -> println(io, name, " >! ", x), node)
 
 """
+    foreach(f, inputs...)
+
+Same as `map`, but will be prevented from gc until all the inputs have gone out of scope. Should be used in cases where `f` does a side-effect.
+"""
+foreach(f, inputs...) = preserve(map(f, inputs...))
+
+"""
     filter(f, signal)
 
 remove updates from the signal where `f` returns `false`.
