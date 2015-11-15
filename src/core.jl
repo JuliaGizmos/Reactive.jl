@@ -63,6 +63,7 @@ e.g. `preserve(map(println, x))` - this will continue to print updates to x, unt
 function preserve(x::Node)
     for p in x.parents
         p.preservers[x] = get(p.preservers, x, 0)+1
+        preserve(p)
     end
     x
 end
@@ -80,6 +81,7 @@ function unpreserve(x::Node)
         else
             p.preservers[x] = n
         end
+        unpreserve(p)
     end
     x
 end
