@@ -114,6 +114,10 @@ function close(n::Node, warn_nonleaf=true)
             warn("closing a non-leaf node is not a good idea")
         empty!(n.actions)
     end
+
+    for p in n.parents
+        delete!(p.preservers, n)
+    end
 end
 
 function send_value!(node::Node, x, timestep)
