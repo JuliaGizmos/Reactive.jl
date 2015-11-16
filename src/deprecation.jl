@@ -1,7 +1,7 @@
-import Base: consume, foldl, call, @deprecate
+import Base: consume, foldl, call, @deprecate, @deprecate_binding
 export lift, consume, foldl, keepwhen, keepif, dropif, dropwhen
 
-@deprecate Input Signal
+@deprecate_binding Input Signal
 
 @deprecate lift(f, s::Signal...; kwargs...) map(f,s...; kwargs...)
 @deprecate consume(f::Union{Function, DataType}, s::Signal...;kwargs...) map(f, s...;kwargs...)
@@ -10,4 +10,4 @@ export lift, consume, foldl, keepwhen, keepif, dropif, dropwhen
 @deprecate keepif filter
 @deprecate dropif(f, default, signal) filter(x -> !f(x), default, signal)
 @deprecate dropwhen(predicate, x, signal) filterwhen(map(!, predicate), x, signal)
-@deprecate call{T}(::Type{Node{T}}, x) Input(T, x)
+@deprecate call{T}(::Type{Node{T}}, x) Signal(T, x)
