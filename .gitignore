@@ -1,1 +1,4 @@
 doc/html
+.*~
+.*.swp
+.*.swo

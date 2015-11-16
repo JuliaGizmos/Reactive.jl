@@ -1,19 +1,16 @@
-using FactCheck
-using Reactive
-using Compat
 
-number() = round(Int, rand()*100)
+number() = rand(0:100)
 
 facts("Call counting") do
-    a = Input(0)
-    b = Input(0)
+    a = Signal(0)
+    b = Signal(0)
 
-    c = lift(+, a, b)
+    c = map(+, a, b)
     d = merge(a, b)
-    e = lift(+, a, lift(x->2x, a)) # Both depend on a
-    f = lift(+, a, b, c, e)
+    e = map(+, a, map(x->2x, a)) # Both depend on a
+    f = map(+, a, b, c, e)
 
-    count = s -> foldl((x, y) -> x+1, 0, s)
+    count = s -> foldp((x, y) -> x+1, 0, s)
 
     ca = count(a)
     cb = count(b)
@@ -24,7 +21,9 @@ facts("Call counting") do
 
     for i in 1:100
         push!(a, number())
+        step()
         push!(b, number())
+        step()
 
         @fact ca.value --> i
         @fact cb.value --> i

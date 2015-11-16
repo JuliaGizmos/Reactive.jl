@@ -3,13 +3,13 @@ using Reactive
 
 facts("Flatten") do
 
-    a = Input(0)
-    b = Input(1)
+    a = Signal(0)
+    b = Signal(1)
 
-    c = Input(a)
+    c = Signal(a)
 
     d = flatten(c)
-    cnt = foldl((x, y) -> x+1, 0, d)
+    cnt = foldp((x, y) -> x+1, 0, d)
 
     context("Signal{Signal} -> flat Signal") do
         # Flatten implies:
@@ -24,6 +24,7 @@ facts("Flatten") do
 
     context("Current signal updates") do
         push!(a, 2)
+        step()
 
         @fact value(cnt) --> 1
         @fact value(d) --> value(a)
@@ -31,14 +32,17 @@ facts("Flatten") do
 
     context("Signal swap") do
         push!(c, b)
+        step()
         @fact value(cnt) --> 2
         @fact value(d) --> value(b)
 
         push!(a, 3)
+        step()
         @fact value(cnt) --> 2
         @fact value(d) --> value(b)
 
         push!(b, 3)
+        step()
 
         @fact value(cnt) --> 3
         @fact value(d) --> value(b)
