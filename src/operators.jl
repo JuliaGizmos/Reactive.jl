@@ -1,6 +1,7 @@
 import Base: map, merge, filter
 
 export map,
+       foreach,
        probe,
        filter, 
        filterwhen,
