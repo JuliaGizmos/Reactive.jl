@@ -13,6 +13,17 @@ facts("Basic checks") do
     a = Signal(number())
     b = map(x -> x*x, a)
 
+    context("constructors") do
+        s1 = Signal{Float64}(1) # convert from int
+        s2 = Signal(1.0)
+        s3 = Signal(Float64, 1)
+        @fact typeof(s1) --> Signal{Float64}
+        @fact typeof(s1) --> typeof(s2)
+        @fact typeof(s2) --> typeof(s3)
+        s4 = Signal{Int}(1.0) # convert from float
+        @fact typeof(s4) --> Signal{Int}
+    end
+
     context("map") do
 
         # Lift type
