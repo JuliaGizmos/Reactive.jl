@@ -10,4 +10,4 @@ export lift, consume, foldl, keepwhen, keepif, dropif, dropwhen
 @deprecate keepif filter
 @deprecate dropif(f, default, signal) filter(x -> !f(x), default, signal)
 @deprecate dropwhen(predicate, x, signal) filterwhen(map(!, predicate), x, signal)
-@deprecate call{T}(::Type{Node{T}}, x) Signal(T, x)
+@deprecate call{T}(::Type{Signal{T}}, x) Signal(T, x)

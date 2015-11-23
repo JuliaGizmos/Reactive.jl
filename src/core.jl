@@ -1,7 +1,7 @@
 import Base: push!, eltype, close
 export Signal, push!, value, preserve, unpreserve, close
 
-##### Node #####
+##### Signal #####
 
 const debug_memory = false # Set this to true to debug gc of nodes
 
@@ -9,7 +9,7 @@ const nodes = WeakKeyDict()
 const io_lock = ReentrantLock()
 
 if !debug_memory
-    type Node{T}
+    type Signal{T}
         value::T
         parents::Tuple
         actions::Vector
@@ -17,14 +17,14 @@ if !debug_memory
         preservers::Dict
     end
 else
-    type Node{T}
+    type Signal{T}
         value::T
         parents::Tuple
         actions::Vector
         alive::Bool
         preservers::Dict
         bt
-        function Node(v, parents, actions, alive, pres)
+        function Signal(v, parents, actions, alive, pres)
             n=new(v,parents,actions,alive,pres,backtrace())
             nodes[n] = nothing
             finalizer(n, log_gc)
@@ -33,12 +33,10 @@ else
     end
 end
 
-typealias Signal Node
-
 log_gc(n) =
     @async begin
         lock(io_lock)
-        print(STDERR, "Node got gc'd. Creation backtrace:")
+        print(STDERR, "Signal got gc'd. Creation backtrace:")
         Base.show_backtrace(STDERR, n.bt)
         println(STDOUT)
         unlock(io_lock)
@@ -50,8 +48,8 @@ immutable Action
 end
 isrequired(a::Action) = a.recipient.value != nothing && a.recipient.value.alive
 
-Node{T}(x::T, parents=()) = Node{T}(x, parents, Action[], true, Dict{Node, Int}())
-Node{T}(::Type{T}, x, parents=()) = Node{T}(x, parents, Action[], true, Dict{Node, Int}())
+Signal{T}(x::T, parents=()) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
+Signal{T}(::Type{T}, x, parents=()) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
 
 # preserve/unpreserve nodes from gc
 """
@@ -60,7 +58,7 @@ Node{T}(::Type{T}, x, parents=()) = Node{T}(x, parents, Action[], true, Dict{Nod
 prevents `signal` from being garbage collected as long as any of its parents are around. Useful for when you want to do some side effects in a signal.
 e.g. `preserve(map(println, x))` - this will continue to print updates to x, until x goes out of scope. `foreach` is a shorthand for `map` with `preserve`.
 """
-function preserve(x::Node)
+function preserve(x::Signal)
     for p in x.parents
         p.preservers[x] = get(p.preservers, x, 0)+1
         preserve(p)
@@ -73,7 +71,7 @@ end
 
 allow `signal` to be garbage collected. See also `preserve`.
 """
-function unpreserve(x::Node)
+function unpreserve(x::Signal)
     for p in x.parents
         n = get(p.preservers, x, 0)-1
         if n <= 0
@@ -86,13 +84,13 @@ function unpreserve(x::Node)
     x
 end
 
-Base.show(io::IO, n::Node) =
+Base.show(io::IO, n::Signal) =
     write(io, "Signal{$(eltype(n))}($(n.value), nactions=$(length(n.actions))$(n.alive ? "" : ", closed"))")
 
-value(n::Node) = n.value
+value(n::Signal) = n.value
 value(::Void) = false
-eltype{T}(::Node{T}) = T
-eltype{T}(::Type{Node{T}}) = T
+eltype{T}(::Signal{T}) = T
+eltype{T}(::Type{Signal{T}}) = T
 
 ##### Connections #####
 
@@ -106,7 +104,7 @@ function remove_action!(f, node, recipient)
     node.actions = filter(a -> a.f != f, node.actions)
 end
 
-function close(n::Node, warn_nonleaf=true)
+function close(n::Signal, warn_nonleaf=true)
     finalize(n) # stop timer etc.
     n.alive = false
     if !isempty(n.actions)
@@ -120,7 +118,7 @@ function close(n::Node, warn_nonleaf=true)
     end
 end
 
-function send_value!(node::Node, x, timestep)
+function send_value!(node::Signal, x, timestep)
     # Dead node?
     !node.alive && return
 
@@ -136,7 +134,7 @@ do_action(a::Action, timestep) =
     isrequired(a) && a.f(a.recipient.value, timestep)
 
 # If any actions have been gc'd, remove them
-cleanup_actions(node::Node) =
+cleanup_actions(node::Signal) =
     node.actions = filter(isrequired, node.actions)
 
 
@@ -160,7 +158,7 @@ object, and `processed_bt` which is the backtrace of the exception.
 
 The default error callback will print the error and backtrace to STDERR.
 """
-Base.push!(n::Node, x, onerror=print_error) = _push!(n, x, onerror)
+Base.push!(n::Signal, x, onerror=print_error) = _push!(n, x, onerror)
 
 function _push!(n, x, onerror=print_error)
     taken = Base.n_avail(_messages)

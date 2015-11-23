@@ -8,7 +8,7 @@ Spawn a new task to run a function when input signal updates. Returns a signal o
 """
 function async_map(f, init, inputs...; typ=typeof(init), onerror=print_error)
 
-    node = Node(typ, init, inputs)
+    node = Signal(typ, init, inputs)
     map(inputs...; init=nothing, typ=Any) do args...
         outer_task = current_task()
         @async begin
@@ -29,9 +29,9 @@ Spawn a new task on process `procid` to run a function when input signal updates
 """
 function remote_map(procid, f, init, inputs...; typ=typeof(init), onerror=print_error)
 
-    node = Node(typ, init, inputs)
+    node = Signal(typ, init, inputs)
 
-    node = Node(typ, init, inputs)
+    node = Signal(typ, init, inputs)
     map(inputs...; init=nothing, typ=Any) do args...
         outer_task = current_task()
         rref = @spawnat procid begin
