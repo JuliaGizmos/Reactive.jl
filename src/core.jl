@@ -48,8 +48,18 @@ immutable Action
 end
 isrequired(a::Action) = a.recipient.value != nothing && a.recipient.value.alive
 
-Signal{T}(x::T, parents=()) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
-Signal{T}(::Type{T}, x, parents=()) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
+
+function Base.call{T}(::Type{Signal{T}}, x, parents=())
+    Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
+end
+
+function Signal{T}(x::T, parents=())
+    Signal{T}(x, parents)
+end
+
+function Signal{T}(::Type{T}, x, parents=())
+    Signal{T}(x, parents)
+end
 
 # preserve/unpreserve nodes from gc
 """
