@@ -50,6 +50,8 @@ isrequired(a::Action) = a.recipient.value != nothing && a.recipient.value.alive
 
 Signal{T}(x::T, parents=()) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
 Signal{T}(::Type{T}, x, parents=()) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
+# A signal of types
+Signal(t::Type) = Signal(Type, t)
 
 # preserve/unpreserve nodes from gc
 """
