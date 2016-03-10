@@ -123,11 +123,12 @@ end
 function send_value!(node::Signal, x, timestep)
     # Dead node?
     !node.alive && return
-
-    # Set the value and do actions
-    node.value = x
-    for action in node.actions
-        do_action(action, timestep)
+    if !(typeof(node.value) <: Void)
+      # Set the value and do actions
+      node.value = x
+      for action in node.actions
+          do_action(action, timestep)
+      end
     end
 end
 send_value!(wr::WeakRef, x, timestep) = wr.value != nothing && send_value!(wr.value, x, timestep)
