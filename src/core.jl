@@ -178,12 +178,8 @@ _push!(::Void, x, onerror=print_error) = nothing
 global run
 let timestep = 0
     function run(steps=typemax(Int))
-        runner_task = current_task()::Task
-        iter = 1
-        while iter <= steps
+        for iter=1:steps
             timestep += 1
-            iter += 1
-
             let message = take!(_messages)
                 node, value, onerror = message
                 try
@@ -222,9 +218,34 @@ end
 # Run everything queued up till the instant of calling this function
 run_till_now() = run(Base.n_avail(_messages))
 
+let _is_eventloop_running = false
+    global isrunning, stop_event_loop, start_event_loop
+    """
+    Returns wether Reactive's event processing loop is running
+    """
+    @inline isrunning() = _is_eventloop_running::Bool
+    """
+    Stops the event processing loop if running
+    """
+    function stop_event_loop()
+        yield()
+        if isrunning()
+            _is_eventloop_running = false
+        end
+    end
+    """
+    Starts the event processing loop if not already running
+    """
+    function start_event_loop()
+        isrunning() && return
+        _is_eventloop_running = true
+        while isrunning()
+            run_till_now()
+            yield()
+        end
+    end
+end
 # A decent default runner task
 function __init__()
-    global runner_task = @async begin
-        Reactive.run()
-    end
+    @async start_event_loop()
 end

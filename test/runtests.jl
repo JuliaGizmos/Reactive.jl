@@ -1,11 +1,7 @@
 using Reactive
 
 # Stop the runner task
-try
-    println("Killing ", Reactive.runner_task) # the task switch caused here is required!
-    Base.throwto(Reactive.runner_task, InterruptException())
-catch
-end
+Reactive.stop_event_loop()
 
 include("basics.jl")
 #include("gc.jl")
