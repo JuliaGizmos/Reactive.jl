@@ -85,15 +85,10 @@ facts("Timing functions") do
 
         @fact value(y) --> 0
         @fact value(z) --> 0
-        @fact value(z′) --> 0
         @fact queue_size() --> 0
 
-        sleep(0.07)
+        sleep(0.1)
 
-        @fact value(y) --> 0 # update hasn't come in yet
-        @fact value(z′) --> 0
-        @fact queue_size() --> 0
-        sleep(0.03)
         @fact queue_size() --> 1
         step()
         @fact value(y) --> 3
