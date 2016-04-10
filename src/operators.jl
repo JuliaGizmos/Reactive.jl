@@ -1,7 +1,10 @@
 import Base: map, merge, filter
 
+if VERSION >= v"0.5.0-dev"
+    import Base.foreach
+end
+
 export map,
-       foreach,
        probe,
        filter, 
        filterwhen,
@@ -50,7 +53,7 @@ probe(node, name, io=STDERR) =
 
 Same as `map`, but will be prevented from gc until all the inputs have gone out of scope. Should be used in cases where `f` does a side-effect.
 """
-foreach(f, inputs...) = preserve(map(f, inputs...))
+foreach(f, inputs::Signal...) = preserve(map(f, inputs...))
 
 """
     filter(f, signal)
