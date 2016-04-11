@@ -23,11 +23,11 @@ export map,
 
 Transform signal `s` by applying `f` to each element. For multiple signal arguments, apply `f` elementwise.
 """
-function map(f, inputs::Signal...;
-             init=f(map(value, inputs)...), typ=typeof(init))
+function map(f, input::Signal, inputsrest::Signal...;
+             init=f(map(value, (input,inputsrest...))...), typ=typeof(init))
 
-    n = Signal(typ, init, inputs)
-    connect_map(f, n, inputs...)
+    n = Signal(typ, init, (input,inputsrest...))
+    connect_map(f, n, input, inputsrest...)
     n
 end
 
