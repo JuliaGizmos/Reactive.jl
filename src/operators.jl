@@ -1,6 +1,6 @@
 import Base: map, merge, filter
 
-if VERSION >= v"0.5.0-dev"
+if isdefined(Base, :foreach)
     import Base.foreach
 end
 
