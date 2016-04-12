@@ -18,7 +18,7 @@
     <div class="container">
       <div class="row">
         <ul>
-          <li><div id="pkgname">Reactive 0.2.2+</div></li>
+          <li><div id="pkgname">Reactive 0.3.2</div></li>
           <li><a href="http://github.com/JuliaLang/Reactive.jl">Code</a></li>
           <li><a href="http://github.com/JuliaLang/Reactive.jl/issues">Issues</a></li>
         </ul>
@@ -34,17 +34,20 @@
 <img src="Star-On-Machine.jpg" />
 </figure>
 <p>Reactive.jl is a Julia package for <a href="https://en.wikipedia.org/wiki/Reactive_programming">Reactive Programming</a>. It makes writing event-driven programs simple.</p>
-<p>Reactive borrows its design from <a href="http://elm-lang.org/">Elm</a> (see also <a href="http://elm-lang.org/learn/What-is-FRP.elm">Functional Reactive Programming</a>).</p>
-<h1 id="getting-started"><a href="#getting-started">Getting Started</a></h1>
+<p>Reactive borrows its vocabulary from <a href="http://elm-lang.org/">Elm</a>.</p>
+<h1 id="what-is-reactive-programming">What is reactive programming?</h1>
+<p><em>Reactive programming</em> is a way of creating event-driven programs in terms of <strong>streams of data</strong>. The streams in this package are called Signals, the name signifies the fact that they always have a value, and are conceptually continuous like electrical signals. For example, a keyboard gives out a <em>signal of keys pressed</em>, a timer might give out a <em>signal of timestamps</em>, a database can consume a <em>signal of queries</em> and so on. Reactive also provides functions for common operations on signals such as transforming, filtering, merging, sampling, and throttling.</p>
+<h1 id="getting-started">Getting Started</h1>
 <p>To install the latest release of Reactive, run the following in the Julia REPL.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">Pkg.add(<span class="st">&quot;Reactive&quot;</span>)</code></pre>
 <p>To start using it, import it:</p>
-<pre class="sourceCode julia julia"><code class="sourceCode julia">using Reactive</code></pre>
-<h1 id="a-tutorial-introduction"><a href="#a-tutorial-introduction">A Tutorial Introduction</a></h1>
-<h2 id="signals"><a href="#signals">Signals</a></h2>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">
+using Reactive</code></pre>
+<h1 id="a-tutorial-introduction">A Tutorial Introduction</h1>
+<h2 id="signals">Signals</h2>
 <!-- the dot language mapping of signal types:
         input: 'hexagon'
-        lift: 'invtrapezium'
+        map: 'invtrapezium'
         foldp: 'rect'
         sampleOn: 'house'
         constant: 'none'
@@ -52,165 +55,180 @@
         merge: 'invtriangle';
         default: 'ellipse';
 -->
-<p>The basic currency of Reactive programs is the signal. <code>Signal{T}</code> is an abstract type that represents a time-varying value of type <code>T</code>. You can create, mix and mash <code>Signal</code>s using Reactive.</p>
-<p>An <code>Input</code> is the most basic kind of signal: it has no <em>parents</em>--all updates to it are explicitly done through a call to <code>push!</code>.</p>
+<p>The basic currency of Reactive programs is the signal. <code>Signal{T}</code> represents a time-varying value of type <code>T</code>.</p>
+<p>A signal can be created using the <code>Signal</code> constructor, and must be given an inital value.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
-x = Input(<span class="fl">0</span>)
-typeof(x)
-<span class="co"># =&gt; Input{Int64}</span>
-super(Input{<span class="dt">Int64</span>})
-<span class="co"># =&gt; Signal{Int64}</span>
-value(x)
-<span class="co"># =&gt; 0</span>
-push!(x, <span class="fl">2</span>)
-value(x)
-<span class="co"># =&gt; 2</span></code></pre>
-<h2 id="derived-signals"><a href="#derived-signals">Derived signals</a></h2>
-<p>The <code>lift</code> operator can be used to transform one signal into another.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">xsquared = lift(a -&gt; a*a, x)
-typeof(xsquared)
-<span class="co"># =&gt; Lift{Int64}</span>
-super(Reactive.Lift{<span class="dt">Int64</span>})
-<span class="co"># =&gt; Node{Int64}</span>
-super(super(Reactive.Lift{<span class="dt">Int64</span>}))
-<span class="co"># =&gt; Signal{Int64}</span>
-value(xsquared)
-<span class="co"># =&gt; 4</span></code></pre>
-<p>The type of the lifted signal can be specified using a keyword argument <code>typ=T</code> to <code>lift</code>. If omitted, it is determined from the type returned by the function, using the current <code>value</code>s of its inputs.</p>
-<p>Now for every value <code>x</code> takes, <code>xsquared</code> will hold its square.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">push!(x, <span class="fl">3</span>)
-value(xsquared)
-<span class="co"># =&gt; 9</span></code></pre>
-<p><code>lift</code> can take more than one signal as argument.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">y = lift((a, b) -&gt; a + b, x, xsquared; typ = <span class="dt">Int</span>)
-value(y)
-<span class="co"># =&gt; 12</span></code></pre>
-<p><strong>Example: A stupid line-follower bot</strong></p>
-<p>In the examples below we explore how a simple line-follower robot could be programmed with Reactive.</p>
-<p>Here are the specifications of the robot:</p>
-<ol type="1">
-<li>There are 3 sensors: left, middle and right</li>
-<li>There are 2 DC motors: left and right (the bot is balanced by a castor wheel)</li>
-</ol>
-<p>We start off by creating a signal of sensor values.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># the values signify how much of the line each sensor (left, middle, right) is seeing</span>
-sensor_input = Input([<span class="fl">0.0</span>, <span class="fl">1.0</span>, <span class="fl">0.0</span>])     <span class="co"># :: Input{Vector{Float64}}</span></code></pre>
-<p>Then create motor voltages from sensor readings.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">
-<span class="kw">function</span> v_left(sensors)
-   <span class="co"># slow down when left sensor is seeing a lot of the line</span>
-   <span class="co"># -ve voltage turns the wheel backwards</span>
-   <span class="co"># this could, of course, be [more complicated than this](http://www.societyofrobots.com/member_tutorials/book/export/html/350).</span>
-   sensors[<span class="fl">2</span>] - sensors[<span class="fl">1</span>]
-<span class="kw">end</span>
+julia&gt; x = Signal(<span class="fl">0</span>)
+Signal{<span class="dt">Int64</span>}(<span class="fl">0</span>, nactions=<span class="fl">0</span>)
 
-<span class="co"># Similarly</span>
-<span class="kw">function</span> v_right(sensors)
-   <span class="co"># slow down when the right sensor is seeing the line</span>
-   sensors[<span class="fl">2</span>] - sensors[<span class="fl">3</span>]
-<span class="kw">end</span>
+julia&gt; value(x)
+<span class="fl">0</span></code></pre>
+<p>to update the value in a signal, use the <code>push!</code> function on signals.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
+julia&gt; push!(x, <span class="fl">42</span>)
 
-left_motor  = lift(v_left,  sensor_input, typ=<span class="dt">Float64</span>)
-right_motor = lift(v_right, sensor_input, typ=<span class="dt">Float64</span>)</code></pre>
-<p>The <code>@lift</code> macro makes this simpler:</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">left_motor  = @lift sensor_input[<span class="fl">1</span>] - sensor_input[<span class="fl">3</span>]
-right_motor = @lift sensor_input[<span class="fl">1</span>] - sensor_input[<span class="fl">2</span>]</code></pre>
-<p>We now ask the bot to apply the voltages across its two wheels:</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">function</span> set_voltages(left, right)
-    write(LEFT_MOTOR_OUTPUT,  left)
-    write(RIGHT_MOTOR_OUTPUT, right)
-<span class="kw">end</span>
+julia&gt; value(x)
+<span class="fl">42</span></code></pre>
+<p>the <code>push!</code> function updates the signal asynchronously via a central channel of updates. Below we will learn ways to derive dependent signals from one or more signals that already exist.</p>
+<h2 id="derived-signals">Derived signals</h2>
+<p>The <code>map</code> function can be used to transform signals by applying a function.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">julia&gt; xsquared = map(a -&gt; a*a, x)
 
-@lift set_voltages(left_motor, right_motor)</code></pre>
-<h2 id="the-event-loop"><a href="#the-event-loop">The Event Loop</a></h2>
-<p>Finally, we need to set up a loop which reads input from the sensors and plumbs it into the data flow we created above.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">function</span> read_sensors()
-    [read(LEFT_SENSOR_PIN),
-     read(MIDDLE_SENSOR_PIN),
-     read(RIGHT_SENSOR_PIN)]
-<span class="kw">end</span>
+julia&gt; value(xsquared)
+<span class="fl">1764</span> <span class="co"># 42^2</span></code></pre>
+<p>Now for every value of <code>x</code>, <code>xsquared</code> will hold its square.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">julia&gt; push!(x, <span class="fl">3</span>)
 
-<span class="kw">while</span> true
-    <span class="co"># push! changes the value held by an input signal and</span>
-    <span class="co"># propagates it through the data flow</span>
-    @async push!(sensor_input, read_sensors())
-    sleep(<span class="fl">0.1</span>)
+julia&gt; value(xsquared)
+<span class="fl">9</span></code></pre>
+<p>The type of the <code>map</code> signal can be specified using a keyword argument <code>typ=T</code> to <code>map</code>. If omitted, it is determined from the type returned by the function, using the current <code>value</code>s of its inputs. If you want to set an initial value without computing it from the current value of the input signals, you can specify it using the <code>init</code> keyword argument. <code>map</code> can take more than one signals as argument. Here is a demonstration of these three points.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">julia&gt; y = map(+, x, xsquared; typ=<span class="dt">Float64</span>, init=<span class="fl">0</span>)
+
+julia&gt; value(y) <span class="co"># Will give the initial value</span>
+<span class="fl">0.0</span>
+
+julia&gt; push!(x, <span class="fl">4</span>)
+
+julia&gt; value(y) <span class="co"># will be 4 + 4^2</span>
+<span class="fl">20.0</span></code></pre>
+<p>Note that, signal nodes that do not have any reference in Reactive are admissible to <a href="https://en.wikipedia.org/wiki/Garbage_collection">garbage collection</a> and subsequent termination of updates. So if you are creating a signal with <code>map</code> and to do some side effect (like printing) and don't plan to keep a reference to it, it may be stopped in the next GC pass. To prevent this from happening, you can <em>preserve</em> a signal using the <code>preserve</code> function.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">julia&gt; preserve(map(println, x))
+Signal{<span class="dt">Void</span>}(nothing, nactions=<span class="fl">0</span>) <span class="co"># the type is Void because that&#39;s the return type of println</span>
+<span class="fl">4</span>
+
+julia&gt; push!(x, <span class="fl">25</span>)
+<span class="fl">25</span> <span class="co"># printed by the above signal</span></code></pre>
+<p><code>foreach(f, x)</code> is a shorthand for <code>preserve(map(f, x))</code>. So the above could also have been written as <code>foreach(println, x)</code>.</p>
+<p><code>map</code> is a very useful function on signals. We will see an example of map below.</p>
+<p><strong>Example: A simple animation</strong></p>
+<p>Let's use <code>map</code> to create an animation of a bouncing ball using <a href="http://composejl.org">Compose.jl</a>.</p>
+<p>Our goal is to create a signal of Compose pictures that updates over time. To do this we will first create a function which given a time <code>t</code>, returns a picture of the ball at that time <code>t</code>. We will worry about updating this time <code>t</code> later.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">function</span> drawball(t)
+  y = <span class="fl">1</span>-abs(sin(t)) <span class="co"># The y coordinate.</span>
+  compose(context(), circle(<span class="fl">0.5</span>, y, <span class="fl">0.04</span>))
 <span class="kw">end</span></code></pre>
-<p>See <a href="#timed-signals-and-sampling">Timed signals and sampling</a> for a more elegant way of doing the same!</p>
-<h2 id="maintaining-state"><a href="#maintaining-state">Maintaining State</a></h2>
-<p><strong>Example: A Voting System</strong> The following examples deal with a voting system in an election. The voters can either vote for Alice, Bob, or cast an invalid vote.</p>
-<p><a href="api.html#foldl"><code>foldl</code></a> can be used to accumulate a value over time. You might count the number of votes like this:</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">votes   = Input(:NoVote)    <span class="co"># We use :NoVote to denote the initial case</span>
-total   = foldl((acc, vote) -&gt; acc + <span class="fl">1</span>, <span class="fl">0</span>, votes) <span class="co"># Count all votes</span>
-alice   = foldl((acc, vote) -&gt; acc + (vote == :Alice), <span class="fl">0</span>, votes)
-bob     = foldl((acc, vote) -&gt; acc + (vote == :Bob),   <span class="fl">0</span>, votes)
-leading = lift((a, b) -&gt; a &gt; b ? :Alice : a &lt; b ? :Bob : :Tie, alice, bob)</code></pre>
-<p>Maintaining a difference between two updates is a bit more involved. To find the difference between previous and current value of a signal, you'd do:</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">function</span> difference(prev, x)
-    prev_diff, prev_val = prev
-    <span class="co"># x becomes prev_val in the next call</span>
-    <span class="kw">return</span> (x-prev_val, x)
+<p>In this function the <code>y</code> coordinate of the ball at any time <code>t</code> is <code>1-abs(sin(t))</code> - when you plot this function over <code>t</code>, you can see that it looks like the bouncing of a ball.</p>
+<p>Next, we need a signal that updates at a reasonable rate every second. That's where the <code>fps</code> function comes in handy. <code>fps(rate)</code> returns a signal which updates <code>rate</code> times every second.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">julia&gt; ticks = fps(<span class="fl">60</span>)</code></pre>
+<p>The <code>ticks</code> signal itself updates to the time elapsed between the current update and the previous update, although this is useful, for the sake of this example, we will use <code>map</code> to create a signal of time stamps from this signal.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">julia&gt; timestamps = map(_ -&gt; time(), ticks)</code></pre>
+<p>Now that we have a signal of timestamps, we can use this to create a signal of compose graphics which will be our animation.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">julia&gt; anim = map(drawball, timestamps)</code></pre>
+<p><strong>Try it.</strong> The <a href="https://github.com/JuliaLang/Interact.jl">Interact</a> package allows you to render <code>Signal</code> objects as they update over time in IJulia notebooks. Try the following code in an IJulia notebook to see the animation we just created.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">using Reactive, Interact, Compose
+
+<span class="kw">function</span> drawball(t)
+  y = <span class="fl">1</span>-abs(sin(t)) <span class="co"># The y coordinate.</span>
+  compose(context(), circle(<span class="fl">0.5</span>, y, <span class="fl">0.04</span>))
 <span class="kw">end</span>
 
-diff = lift(x-&gt;x[<span class="fl">1</span>], foldl(difference, (<span class="fl">0.0</span>, <span class="fl">0.0</span>), signal))</code></pre>
-<p>Note that this method has the advantage that all state is explicit. You could accomplish this by using a global variable to store <code>prev_val</code>, but that is not recommended.</p>
-<h2 id="filter-and-merge"><a href="#filter-and-merge">Filter and merge</a></h2>
-<p>The <a href="api.html#filter"><code>filter</code></a> or <a href="api.html#dropif"><code>dropif</code></a> functions can filter a signal based on a predicate function.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># Create a signal of only valid votes</span>
-<span class="co"># If the initial votes are invalid, we use :NoVote</span>
-valid_votes = filter(x -&gt; x != :Invalid, :NoVote, votes)
+ticks = fps(<span class="fl">60</span>)
+timestamps = map(_ -&gt; time(), ticks)
+map(drawball, timestamps)</code></pre>
+<p>The complete example points to the usual structure of programs written with Reactive. It usually consists of stateless functions (such as <code>drawball</code>) and then wiring input signals to these stateless functions to create the output signal. Below we will see some more involved examples with other operations on signals.</p>
+<h2 id="maintaining-state">Maintaining State</h2>
+<p><a href="api.html#foldp"><code>foldp</code></a> can be used to accumulate a value over time. You might have learned about <a href="https://en.wikipedia.org/wiki/Fold_%28higher-order_function%29">foldl and foldr</a> functions on collection objects. <code>foldp</code> is a similar function, the name stands for &quot;fold over past values&quot;.</p>
+<p>Let's look at how it works: <code>y = foldp(f, init, x)</code></p>
+<p>Here, <code>y</code> is a signal whose initial value is <code>init</code>, and when the signal <code>x</code> updates, <code>f</code> is applied to the current value of <code>y</code> and the current value of <code>x</code> and the result is again stored in <code>y</code>.</p>
+<p>As an example:</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">julia&gt; x = Signal(<span class="fl">0</span>)
 
-<span class="co"># Or</span>
-valid_votes = dropif(x -&gt; x == :Invalid, :NoVote, votes)</code></pre>
-<p>To drop certain updates to a signal you can use <a href="api.html#keepwhen"><code>keepwhen</code></a> and <a href="api.html#dropwhen"><code>dropwhen</code></a>. You could stop collecting votes when there is a security breach like this:</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">secure_votes = keepwhen(everything_secure, votes)
+julia&gt; y = foldp(+, <span class="fl">0</span>, x)
 
-<span class="co"># Or</span>
-secure_votes = dropwhen(security_breached, votes)</code></pre>
-<p><a href="api.html#merge"><code>merge</code></a> merges multiple signals of the same type. To collect all votes from 3 polls into a single signal you'd do something like</p>
+julia&gt; push!(x, <span class="fl">1</span>)
+
+julia&gt; value(y)
+<span class="fl">1</span>
+
+julia&gt; push!(x, <span class="fl">2</span>)
+
+julia&gt; value(y)
+<span class="fl">3</span>
+
+julia&gt; push!(x, <span class="fl">3</span>)
+
+julia&gt; value(y)
+<span class="fl">3</span></code></pre>
+<p>When we wrote <code>y=foldp(+, 0, x)</code> we created a signal <code>y</code> which collects updates to <code>x</code> using the function <code>+</code> and starting from <code>0</code>. In other words, <code>y</code> holds the sum of all updates to <code>x</code>.</p>
+<p>We can rewrite the above bouncing ball example by summing time-deltas given by <code>fps</code> instead of calling time() as follows.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">ticks = fps(<span class="fl">60</span>)
+t = foldp(+, <span class="fl">0.0</span>, ticks)
+map(drawball, t)</code></pre>
+<p>If one were to use <code>fpswhen(switch, 60)</code> instead of <code>fps(60)</code> here to start and stop the fps signal with respect to some other boolean signal called <code>switch</code>, after switching off the animation and switching it on, the ball would start off where it was paused with the foldp version of the animation.</p>
+<h2 id="filtering">Filtering</h2>
+<p>Another important operator on signals is <code>filter</code>. It can be used to filter only those updates which are true according to a given condition.</p>
+<p><code>filter(a -&gt; a % 2 == 0, x)</code> will only keep even updates to the integer signal <code>x</code>.</p>
+<p>A variation of <code>filter</code> called <code>filterwhen</code> lets you keep updates to a signal only when another boolean signal is true.</p>
+<p><code>filterwhen(switch_signal, signal_to_filter)</code></p>
+<h2 id="merging">Merging</h2>
+<p><code>d = merge(a,b,c)</code> will merge updates to <code>a</code>, <code>b</code> and <code>c</code> to produce a signle signal <code>d</code>.</p>
+<h2 id="drop-repeats">Drop repeats</h2>
+<p>You can drop repeated updates to a signal with <a href="api.html#droprepeats"><code>droprepeats</code></a></p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">julia&gt; p = Signal(<span class="fl">0</span>)
+
+julia&gt; foreach(println, p)
+
+julia&gt; push!(p, <span class="fl">0</span>)
+
+julia&gt; push!(p, <span class="fl">1</span>)
+<span class="fl">1</span>
+
+julia&gt; push!(p, <span class="fl">1</span>)</code></pre>
+<p>Notice how the value of p did not get printed when it didn't change from the previous value.</p>
+<p><strong>Example: A Voting System</strong></p>
+<p>To illustrate the functions described above, we will try to model a voting system in an electorate using Reactive. The voters can either vote for Alice, Bob, or cast an invalid vote.</p>
+<p>Input <code>votes</code> signal:</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">votes = Signal(:NoVote)    <span class="co"># Let&#39;s :NoVote to denote the initial case</span></code></pre>
+<p>Now we can split the vote stream into votes for alice and those for bob.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">alice_votes = filter(v -&gt; v == :Alice, votes)
+bob_votes   = filter(v -&gt; v == :Bob, votes)</code></pre>
+<p>Now let's count the votes cast for alice and bob using foldp</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="kw">function</span> count(cnt, _)
+  cnt+<span class="fl">1</span>
+<span class="kw">end</span>
+
+alice_count = foldp(count, <span class="fl">0</span>, alice_votes)
+bob_count = foldp(count, <span class="fl">0</span>, bob_votes)</code></pre>
+<p>We can use the counts to show at real time who is leading the election.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">leading = map(alice_count, bob_count) <span class="kw">do</span> a, b
+  <span class="kw">if</span> a &gt; b
+    :Alice
+  <span class="kw">elseif</span> b &gt; a
+    :Bob
+  <span class="kw">else</span>
+    :Tie
+  <span class="kw">end</span>
+<span class="kw">end</span></code></pre>
+<p>Notice the use of <a href="http://docs.julialang.org/en/release-0.4/manual/functions/#do-block-syntax-for-function-arguments"><code>do</code> block</a> syntax here. <code>do</code> is a short-hand for creating anonymous functions and passing it as the first argument in a function call (here, to <code>map</code>). It's often useful to improve readability.</p>
+<p>Notice that the <code>leading</code> signal will update on every valid vote received. This is not ideal if we want to say broadcast it to someone over a slow connection, which will result in sending the same value over and over again. To alleviate this problem, we can use the droprepeats function.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">norepeats = droprepeats(leading)</code></pre>
+<p>To demonstrate the use of <code>filterwhen</code> we will conceive a global <code>election_switch</code> signal which can be used to turn voting on or turn off. One could use this switch to stop registering votes before and after the designated time for votes, for example.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">secure_votes = filterwhen(election_switch, votes)</code></pre>
+<p><code>secure_votes</code> will only update when <code>value(election_switch)</code> is <code>true</code>.</p>
+<p>Finally, to demonstrate the use of merge, let's imagine there are multiple polling stations for this election and we would like to merge votes coming in from all of them. This is pretty straightforward:</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">votes = merge(poll1_votes, poll2_votes, poll3_votes)</code></pre>
-<p>You can drop repeated updates to a signal with <a href="api.html#droprepeats"><code>droprepeats</code></a>:</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">leading_norepeat = droprepeats(leading)</code></pre>
-<p><code>leading_norepeat</code> only updates when the leading candidate changes.</p>
-<p>Finally,</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">lift(show_on_TV, alice, bob, stats)</code></pre>
-<h2 id="timed-signals-and-sampling"><a href="#timed-signals-and-sampling">Timed signals and sampling</a></h2>
+<h2 id="time-sampling-and-throttle">Time, sampling and throttle</h2>
 <p>Reactive provides functions to create timed signals. <a href="api.html#every"><code>every</code></a> can be used to create a signal that updates at a certain interval.</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
 
 every10secs = every(<span class="fl">10.0</span>)</code></pre>
 <p><code>every10secs</code> is a signal of timestamps (Float64) which updates every 10 seconds.</p>
 <p><a href="api.html#sampleon"><code>sampleon</code></a> function takes two signals and samples the second signal when the first one changes.</p>
+<p>Let's say in our voting example, we want a signal of the leading voted candidate in the election but would like an update at most every 10 seconds, one could do it like this:</p>
 <pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
-
-<span class="co"># Update to the leading candidate every 10 seconds</span>
 periodic_leading = sampleon(every10secs, leading)</code></pre>
-<p>While <code>every</code> guarrantees the interval, <a href="api.html#fps"><code>fps</code></a> tries to update at a certain maximum rate.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
-
-fps10 = fps(<span class="fl">10.0</span>)</code></pre>
-<p>We can use <code>fps</code> to simplify the <a href="#the-event-loop">event loop</a> in our robot example above:</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># fps returns the time delta between the past two frames</span>
-<span class="co"># This could be useful in animations or plotting. We ignore it here.</span>
-sensor_input = lift((delta) -&gt; read_sensors(), fps(<span class="fl">10.0</span>))</code></pre>
-<p><a href="api.html#fpswhen"><code>fpswhen</code></a> takes a boolean signal as the first argument and stops the timer when this signal becomes false.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># assume circuit completes if none of the sensors can see the line</span>
-circuit_not_complete = lift(s -&gt; sum(s) != <span class="fl">0.0</span>, sensor_inputs)
-sensor_input = lift(read_sensors, fpswhen(circuit_not_complete, <span class="fl">10.0</span>))</code></pre>
-<p>this stops reading the input (and hence moving the bot) when the circuit is complete.</p>
-<p><a href="api.html#timestamp"><code>timestamp</code></a> function can be used to timestamp any signal.</p>
-<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia"><span class="co"># E.g.</span>
-timestamped_votes = timestamp(votes)</code></pre>
-<p><code>timestamped_votes</code> is a signal of <code>(timestamp, vote)</code> where <code>timestamp</code> is a <code>Float64</code> timestamp denoting when the <code>vote</code> came in.</p>
-<h1 id="reactive-in-the-wild"><a href="#reactive-in-the-wild">Reactive in the wild</a></h1>
+<p><code>throttle</code> lets you limit updates to a signal to a maximum of one update in a specified interval of time.</p>
+<p>Suppose you are receiving an input from a sensor and the sampling rate of it can vary and sometimes becomes too high for your program to handle, you can use throttle to down sample it if the frequency of updates become too high.</p>
+<pre class="sourceCode julia julia" execute="false"><code class="sourceCode julia">throttle(<span class="fl">1</span>/<span class="fl">100</span>, sensor_input) <span class="co"># Update at most once in 10ms</span></code></pre>
+<h1 id="reactive-in-the-wild">Reactive in the wild</h1>
 <p>Reactive is a great substrate to build interactive GUI libraries. Here are a few projects that make use of Reactive:</p>
 <ul>
 <li><a href="https://github.com/JuliaLang/Interact.jl">Interact.jl</a></li>
-<li><a href="https://github.com/JuliaLang/Interact.jl">Escher.jl</a></li>
+<li><a href="https://github.com/shashi/Escher.jl">Escher.jl</a></li>
 <li><a href="https://github.com/SimonDanisch/GLPlot.jl">GLPlot.jl</a></li>
 </ul>
 <p>It could also be potentially used for other projects that require any kind of event handling: controlling robots, making music or simulations.</p>
-<h1 id="reporting-bugs"><a href="#reporting-bugs">Reporting Bugs</a></h1>
+<h1 id="reporting-bugs">Reporting Bugs</h1>
 <p>Let me know about any bugs, counterintuitive behavior, or enhancements you'd like by <a href="https://github.com/shashi/Reactive.jl/issues/new">filing a bug</a> on github.</p>
         <hr>
       </div>
@@ -222,6 +240,9 @@ timestamped_votes = timestamp(votes)</code></pre>
             <input class="search" placeholder="SEARCH" />
             <ul class="toc list nav"><li>
                 <a class="toc-item toc-current-doc" href="index.html">Introduction - Reactive.jl</a>
+            </li>
+            <li>
+                <a style="margin-left: 0.5em" class="toc-item" href="#what-is-reactive-programming">What is reactive programming?</a>
             </li>
             <li>
                 <a style="margin-left: 0.5em" class="toc-item" href="#getting-started">Getting Started</a>
@@ -236,16 +257,19 @@ timestamped_votes = timestamp(votes)</code></pre>
                 <a style="margin-left: 1.0em" class="toc-item" href="#derived-signals">Derived signals</a>
             </li>
             <li>
-                <a style="margin-left: 1.0em" class="toc-item" href="#the-event-loop">The Event Loop</a>
-            </li>
-            <li>
                 <a style="margin-left: 1.0em" class="toc-item" href="#maintaining-state">Maintaining State</a>
             </li>
             <li>
-                <a style="margin-left: 1.0em" class="toc-item" href="#filter-and-merge">Filter and merge</a>
+                <a style="margin-left: 1.0em" class="toc-item" href="#filtering">Filtering</a>
             </li>
             <li>
-                <a style="margin-left: 1.0em" class="toc-item" href="#timed-signals-and-sampling">Timed signals and sampling</a>
+                <a style="margin-left: 1.0em" class="toc-item" href="#merging">Merging</a>
+            </li>
+            <li>
+                <a style="margin-left: 1.0em" class="toc-item" href="#drop-repeats">Drop repeats</a>
+            </li>
+            <li>
+                <a style="margin-left: 1.0em" class="toc-item" href="#time-sampling-and-throttle">Time, sampling and throttle</a>
             </li>
             <li>
                 <a style="margin-left: 0.5em" class="toc-item" href="#reactive-in-the-wild">Reactive in the wild</a>
@@ -276,7 +300,7 @@ timestamped_votes = timestamp(votes)</code></pre>
     </div>
 
   <footer class="col-sm-8">
-    <p class="muted">Last modified by Shashi Gowda on Thu Aug 27 21:59:48 IST 2015. Generated with
+    <p class="muted">Last modified by Shashi Gowda on Tue Apr 12 11:11:09 IST 2016. Generated with
     <a href="https://github.com/dcjones/Judo.jl">Judo</a>.</p>
   </footer>
 
