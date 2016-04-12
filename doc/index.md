@@ -23,7 +23,8 @@ Pkg.add("Reactive")
 ```
 
 To start using it, import it:
-```julia
+```{.julia execute="false"}
+
 using Reactive
 ```
 # A Tutorial Introduction
@@ -101,7 +102,7 @@ julia> value(y) # will be 4 + 4^2
 
 Note that, signal nodes that do not have any reference in Reactive are admissible to [garbage collection](https://en.wikipedia.org/wiki/Garbage_collection) and subsequent termination of updates. So if you are creating a signal with `map` and to do some side effect (like printing) and don't plan to keep a reference to it, it may be stopped in the next GC pass. To prevent this from happening, you can *preserve* a signal using the `preserve` function.
 
-```julia
+```{.julia execute="false"}
 julia> preserve(map(println, x))
 Signal{Void}(nothing, nactions=0) # the type is Void because that's the return type of println
 4
@@ -120,7 +121,7 @@ Let's use `map` to create an animation of a bouncing ball using [Compose.jl](htt
 
 Our goal is to create a signal of Compose pictures that updates over time. To do this we will first create a function which given a time `t`, returns a picture of the ball at that time `t`. We will worry about updating this time `t` later.
 
-```
+```{.julia execute="false"}
 function drawball(t)
   y = 1-abs(sin(t)) # The y coordinate.
   compose(context(), circle(0.5, y, 0.04))
@@ -131,25 +132,25 @@ In this function the `y` coordinate of the ball at any time `t` is `1-abs(sin(t)
 
 Next, we need a signal that updates at a reasonable rate every second. That's where the `fps` function comes in handy. `fps(rate)` returns a signal which updates `rate` times every second.
 
-```
+```{.julia execute="false"}
 julia> ticks = fps(60)
 ```
 
 The `ticks` signal itself updates to the time elapsed between the current update and the previous update, although this is useful, for the sake of this example, we will use `map` to create a signal of time stamps from this signal.
 
-```
+```{.julia execute="false"}
 julia> timestamps = map(_ -> time(), ticks)
 ```
 
 Now that we have a signal of timestamps, we can use this to create a signal of compose graphics which will be our animation.
 
-```
+```{.julia execute="false"}
 julia> anim = map(drawball, timestamps)
 ```
 
 **Try it.** The [Interact](https://github.com/JuliaLang/Interact.jl) package allows you to render `Signal` objects as they update over time in IJulia notebooks. Try the following code in an IJulia notebook to see the animation we just created.
 
-```
+```{.julia execute="false"}
 using Reactive, Interact, Compose
 
 function drawball(t)
@@ -174,7 +175,7 @@ Here, `y` is a signal whose initial value is `init`, and when the signal `x` upd
 
 As an example:
 
-```
+```{.julia execute="false"}
 julia> x = Signal(0)
 
 julia> y = foldp(+, 0, x)
@@ -198,7 +199,7 @@ julia> value(y)
 When we wrote `y=foldp(+, 0, x)` we created a signal `y` which collects updates to `x` using the function `+` and starting from `0`. In other words, `y` holds the sum of all updates to `x`.
 
 We can rewrite the above bouncing ball example by summing time-deltas given by `fps` instead of calling time() as follows.
-```
+```{.julia execute="false"}
 ticks = fps(60)
 t = foldp(+, 0.0, ticks)
 map(drawball, t)
@@ -224,7 +225,7 @@ A variation of `filter` called `filterwhen` lets you keep updates to a signal on
 
 You can drop repeated updates to a signal with [`droprepeats`](api.html#droprepeats)
 
-```
+```{.julia execute="false"}
 julia> p = Signal(0)
 
 julia> foreach(println, p)
@@ -244,20 +245,20 @@ To illustrate the functions described above, we will try to model a voting syste
 
 Input `votes` signal:
 
-```
+```{.julia execute="false"}
 votes = Signal(:NoVote)    # Let's :NoVote to denote the initial case
 ```
 
 Now we can split the vote stream into votes for alice and those for bob.
 
-```
+```{.julia execute="false"}
 alice_votes = filter(v -> v == :Alice, votes)
 bob_votes   = filter(v -> v == :Bob, votes)
 ```
 
 Now let's count the votes cast for alice and bob using foldp
 
-```
+```{.julia execute="false"}
 function count(cnt, _)
   cnt+1
 end
@@ -268,7 +269,7 @@ bob_count = foldp(count, 0, bob_votes)
 
 We can use the counts to show at real time who is leading the election.
 
-```
+```{.julia execute="false"}
 leading = map(alice_count, bob_count) do a, b
   if a > b
     :Alice
@@ -284,7 +285,7 @@ Notice the use of [`do` block](http://docs.julialang.org/en/release-0.4/manual/f
 
 Notice that the `leading` signal will update on every valid vote received. This is not ideal if we want to say broadcast it to someone over a slow connection, which will result in sending the same value over and over again. To alleviate this problem, we can use the droprepeats function.
 
-```
+```{.julia execute="false"}
 norepeats = droprepeats(leading)
 ```
 
@@ -328,7 +329,7 @@ periodic_leading = sampleon(every10secs, leading)
 
 Suppose you are receiving an input from a sensor and the sampling rate of it can vary and sometimes becomes too high for your program to handle, you can use throttle to down sample it if the frequency of updates become too high.
 
-```
+```{.julia execute="false"}
 throttle(1/100, sensor_input) # Update at most once in 10ms
 ```
 
