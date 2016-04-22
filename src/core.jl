@@ -143,7 +143,14 @@ cleanup_actions(node::Signal) =
 ##### Messaging #####
 
 const CHANNEL_SIZE = 1024
-
+abstract AbstractMessage
+immutable StopMessage <: AbstractMessage
+end
+immutable Message
+    node
+    value
+    onerror::Function
+end
 # Global channel for signal updates
 const _messages = Channel{Any}(CHANNEL_SIZE)
 
@@ -166,31 +173,35 @@ function _push!(n, x, onerror=print_error)
     taken = Base.n_avail(_messages)
     if taken >= CHANNEL_SIZE
         warn("Message queue is full. Ordering may be incorrect.")
-        @async put!(_messages, (n, x, onerror))
+        @async put!(_messages, Message(n, x, onerror))
     else
-        put!(_messages, (WeakRef(n), x, onerror))
+        put!(_messages, Message(WeakRef(n), x, onerror))
     end
     nothing
 end
 _push!(::Void, x, onerror=print_error) = nothing
 
 # remove messages from the channel and propagate them
-global run
+global run, stop
+
 let timestep = 0
+
+    stop() = put!(_messages, StopMessage())
+
     function run(steps=typemax(Int))
         for iter=1:steps
             timestep += 1
             let message = take!(_messages)
-                node, value, onerror = message
+                isa(message, StopMessage) && return # break out of loop
                 try
-                    send_value!(node, value, timestep)
+                    send_value!(message.node, message.value, timestep)
                 catch err
                     if isa(err, InterruptException)
                         println("Reactive event loop was inturrupted.")
                         rethrow()
                     else
                         bt = catch_backtrace()
-                        onerror(node, value, CapturedException(err, bt))
+                        message.onerror(message.node, message.value, CapturedException(err, bt))
                     end
                 end
             end
@@ -218,34 +229,9 @@ end
 # Run everything queued up till the instant of calling this function
 run_till_now() = run(Base.n_avail(_messages))
 
-let _is_eventloop_running = false
-    global isrunning, stop_event_loop, start_event_loop
-    """
-    Returns wether Reactive's event processing loop is running
-    """
-    @inline isrunning() = _is_eventloop_running::Bool
-    """
-    Stops the event processing loop if running
-    """
-    function stop_event_loop()
-        yield()
-        if isrunning()
-            _is_eventloop_running = false
-        end
-    end
-    """
-    Starts the event processing loop if not already running
-    """
-    function start_event_loop()
-        isrunning() && return
-        _is_eventloop_running = true
-        while isrunning()
-            run_till_now()
-            yield()
-        end
-    end
-end
 # A decent default runner task
 function __init__()
-    @async start_event_loop()
+    global runner_task = @async begin
+        Reactive.run()
+    end
 end
