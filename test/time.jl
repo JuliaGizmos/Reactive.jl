@@ -116,6 +116,17 @@ facts("Timing functions") do
         @fact value(y) --> 1
         @fact value(z′) --> 2
         @fact value(y′) --> Int[3,2,1]
+
+        # type safety
+        s1 = Signal(3)
+        s2 = Signal(rand(2,2))
+        m = merge(s1, s2)
+        t = throttle(1/60, m; typ=Any)
+        r = rand(3,3)
+        push!(s2, r)
+        Reactive.run(1)
+        sleep(0.05)
+        Reactive.run(1)
+        @fact value(t) --> r
     end
 end
-
