@@ -171,7 +171,7 @@ facts("Basic checks") do
     context("push! inside push!") do
         a = Signal(0)
         b = Signal(1)
-        map(x -> push!(a, x), b)
+        Reactive.preserve(map(x -> push!(a, x), b))
 
         @fact value(a) --> 0
 

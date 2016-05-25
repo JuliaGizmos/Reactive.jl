@@ -1,5 +1,7 @@
 
-number() = rand(0:100)
+if !isdefined(:number)
+    number() = rand(0:100)
+end
 
 facts("Call counting") do
     a = Signal(0)

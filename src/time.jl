@@ -12,8 +12,8 @@ For example
 will create vectors of updates to the integer signal `x` which occur within 0.2 second time windows.
 
 """
-function throttle{T}(dt, node::Signal{T}, f=(acc, x) -> x, init=value(node), reinit=x->x)
-    output = Signal(init, (node,))
+function throttle{T}(dt, node::Signal{T}, f=(acc,x)->x, init=value(node), reinit=x->x; typ=typeof(init))
+    output = Signal(typ, init, (node,))
     throttle_connect(dt, output, node, f, init, reinit)
     output
 end
