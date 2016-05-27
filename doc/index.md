@@ -193,7 +193,7 @@ julia> value(y)
 julia> push!(x, 3)
 
 julia> value(y)
-3
+6
 ```
 
 When we wrote `y=foldp(+, 0, x)` we created a signal `y` which collects updates to `x` using the function `+` and starting from `0`. In other words, `y` holds the sum of all updates to `x`.
@@ -227,6 +227,8 @@ You can drop repeated updates to a signal with [`droprepeats`](api.html#droprepe
 
 ```{.julia execute="false"}
 julia> p = Signal(0)
+
+julia> droprepeats(p)
 
 julia> foreach(println, p)
 
