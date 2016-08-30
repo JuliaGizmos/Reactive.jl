@@ -146,13 +146,16 @@ const CHANNEL_SIZE = 1024
 abstract AbstractMessage
 immutable StopMessage <: AbstractMessage
 end
-immutable Message
+immutable EmptyMessage <: AbstractMessage
+end
+immutable Message <: AbstractMessage
     node
     value
     onerror::Function
 end
 # Global channel for signal updates
-const _messages = Channel{Any}(CHANNEL_SIZE)
+const _messages = Channel{AbstractMessage}(CHANNEL_SIZE)
+
 
 """
 `push!(signal, value, onerror=Reactive.print_error)`
@@ -181,18 +184,33 @@ function _push!(n, x, onerror=print_error)
 end
 _push!(::Void, x, onerror=print_error) = nothing
 
+"""
+Convenience function to notify the Reactive event loop without pushing to
+a Signal.
+"""
+post_empty() = put!(_messages, EmptyMessage())
+
 # remove messages from the channel and propagate them
 global run, stop
 
-let timestep = 0
+let timestep::Int = 0, stop_runner::Bool = false
 
-    stop() = put!(_messages, StopMessage())
+    function stop()
+        run_till_now() # process all remaining events
+        stop_runner = true
+        post_empty() # make sure it's not waiting on an empty message list
+    end
 
-    function run(steps=typemax(Int))
-        for iter=1:steps
+
+
+    """
+    Processes `n` messages from the Reactive event queue.
+    """
+    function run(n::Int)
+        for i=1:n
             timestep += 1
             let message = take!(_messages)
-                isa(message, StopMessage) && return # break out of loop
+                isa(message, EmptyMessage) && continue # ignore emtpy messages
                 try
                     send_value!(message.node, message.value, timestep)
                 catch err
@@ -205,6 +223,16 @@ let timestep = 0
                     end
                 end
             end
+        end
+        return
+    end
+    """
+    Processes messages as long as `stop` isn't called.
+    """
+    function run()
+        stop_runner = false
+        while !stop_runner
+            run(1)
         end
     end
 end
