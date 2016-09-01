@@ -209,13 +209,17 @@ If one were to use `fpswhen(switch, 60)` instead of `fps(60)` here to start and 
 
 ## Filtering
 
-Another important operator on signals is `filter`. It can be used to filter only those updates which are true according to a given condition.
+Another important operator on signals is `filter`. It can be used to filter only those updates which are true according to a given condition. The signature is 
 
-`filter(a -> a % 2 == 0, x)` will only keep even updates to the integer signal `x`.
+`filter{T}(f::Function, default, input::Reactive.Signal{T})`
+
+The default value is needed, to make sure that the filtered signal does not end up empty.
+
+For instance `filter(a -> a % 2 == 0, 0, x)` will only keep even updates to the integer signal `x`.
 
 A variation of `filter` called `filterwhen` lets you keep updates to a signal only when another boolean signal is true.
 
-`filterwhen(switch_signal, signal_to_filter)`
+`filterwhen(switch_signal, default, signal_to_filter)`
 
 ## Merging
 
@@ -254,8 +258,8 @@ votes = Signal(:NoVote)    # Let's :NoVote to denote the initial case
 Now we can split the vote stream into votes for alice and those for bob.
 
 ```{.julia execute="false"}
-alice_votes = filter(v -> v == :Alice, votes)
-bob_votes   = filter(v -> v == :Bob, votes)
+alice_votes = filter(v -> v == :Alice, :NoVote, votes)
+bob_votes   = filter(v -> v == :Bob, :NoVote, votes)
 ```
 
 Now let's count the votes cast for alice and bob using foldp
@@ -294,7 +298,7 @@ norepeats = droprepeats(leading)
 To demonstrate the use of `filterwhen` we will conceive a global `election_switch` signal which can be used to turn voting on or turn off. One could use this switch to stop registering votes before and after the designated time for votes, for example.
 
 ```{.julia execute="false"}
-secure_votes = filterwhen(election_switch, votes)
+secure_votes = filterwhen(election_switch, :NoVote, votes)
 ```
 `secure_votes` will only update when `value(election_switch)` is `true`.
 
