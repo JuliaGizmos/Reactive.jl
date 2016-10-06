@@ -3,73 +3,49 @@ facts("Timing functions") do
 
     context("fpswhen") do
         b = Signal(false)
-        t = fpswhen(b, 10)
+        t = fpswhen(b, 2)
         acc = foldp((x, y) -> x+1, 0, t)
-        sleep(0.14)
+        sleep(0.75)
 
         @fact queue_size() --> 0
         push!(b, true)
 
-        dt = @elapsed Reactive.run(11) # the first one starts the timer
+        dt = @elapsed Reactive.run(3) # the first one starts the timer
         push!(b, false)
         Reactive.run(1)
 
         sleep(0.11) # no more updates
         @fact queue_size() --> 0
 
-        @fact dt --> roughly(1, atol=0.2) # mac OSX needs a lot of tolerence here
-        @fact value(acc) --> 10
+        @fact dt --> roughly(1, atol=0.25) # mac OSX needs a lot of tolerence here
+        @fact value(acc) --> 2
 
-    end
-
-    context("fps") do
-        t = fps(10)
-        acc = foldp(push!, Float64[], t)
-        Reactive.run(11) # Starts with 0
-        log = copy(value(acc))
-
-        @fact log[1] --> roughly(0.1, atol=0.1) # First one's always crappy
-        log = log[2:end]
-
-        @fact sum(log) --> roughly(1.0, atol=0.05)
-        @fact [1/10 for i=1:10] --> roughly(log, atol=0.03)
-
-        @fact queue_size() --> 0
-        sleep(0.11)
-        @fact queue_size() --> 1
-        sleep(0.22)
-        @fact queue_size() --> 1
-
-        close(acc)
-        close(t)
-
-        Reactive.run_till_now()
     end
 
     context("every") do
-        t = every(0.1)
+        t = every(0.5)
         acc = foldp(push!, Float64[], t)
-        Reactive.run(11)
+        Reactive.run(4)
         end_t = time()
         log = copy(value(acc))
 
-        @fact log[end-1] --> roughly(end_t, atol=0.001)
+        @fact log[end-1] --> roughly(end_t, atol=0.01)
 
         close(acc)
         close(t)
         Reactive.run_till_now()
 
-        @fact [0.1 for i=1:10] --> roughly(diff(log), atol=0.03)
+        @fact [0.5, 0.5, 0.5] --> roughly(diff(log), atol=0.1)
 
-        sleep(0.2)
+        sleep(0.75)
         # make sure close actually also closed the timer
         @fact queue_size() --> 0
     end
 
     context("throttle") do
         x = Signal(0)
-        y = throttle(0.1, x)
-        y′ = throttle(0.2, x, push!, Int[], x->Int[]) # collect intermediate updates
+        y = throttle(0.5, x)
+        y′ = throttle(1, x, push!, Int[], x->Int[]) # collect intermediate updates
         z = foldp((acc, x) -> acc+1, 0, y)
         z′ = foldp((acc, x) -> acc+1, 0, y′)
 
@@ -87,13 +63,14 @@ facts("Timing functions") do
         @fact value(z) --> 0
         @fact queue_size() --> 0
 
-        sleep(0.1)
+        sleep(0.55)
 
         @fact queue_size() --> 1
         step()
         @fact value(y) --> 3
         @fact value(z) --> 1
-        sleep(0.1)
+        @fact value(z′) --> 0
+        sleep(0.5)
 
         @fact queue_size() --> 1
         step()
@@ -108,7 +85,7 @@ facts("Timing functions") do
 
         push!(x, 1)
         step()
-        sleep(0.2)
+        sleep(1)
 
         @fact queue_size() --> 2
         step()
@@ -121,11 +98,11 @@ facts("Timing functions") do
         s1 = Signal(3)
         s2 = Signal(rand(2,2))
         m = merge(s1, s2)
-        t = throttle(1/60, m; typ=Any)
+        t = throttle(1/5, m; typ=Any)
         r = rand(3,3)
         push!(s2, r)
         Reactive.run(1)
-        sleep(0.05)
+        sleep(0.5)
         Reactive.run(1)
         @fact value(t) --> r
     end
