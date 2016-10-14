@@ -1,6 +1,5 @@
 using FactCheck
 using Reactive
-using Compat
 
 step() = Reactive.run(1)
 queue_size() = Base.n_avail(Reactive._messages)
