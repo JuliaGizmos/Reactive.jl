@@ -61,7 +61,7 @@ facts("Basic checks") do
         push!(a, number())
         step()
         # precedence to b over a -- a is older.
-        @fact value(e) --> value(a)
+        @fact value(e) --> value(b)
 
         c = map(_->_, a) # Make a younger than b
         f = merge(d, c, b)
@@ -73,6 +73,7 @@ facts("Basic checks") do
     context("foldp") do
 
         ## foldl over time
+        gc()
         push!(a, 0)
         step()
         f = foldp(+, 0, a)
