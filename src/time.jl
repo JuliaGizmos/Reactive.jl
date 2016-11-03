@@ -8,7 +8,7 @@ Throttle a signal to update at most once every dt seconds. By default, the throt
 This behavior can be changed by the `f`, `init` and `reinit` arguments. The `init` and `f` functions are similar to `init` and `f` in `foldp`. `reinit` is called when a new throttle time window opens to reinitialize the initial value for accumulation, it gets one argument, the previous accumulated value.
 
 For example
-    y = throttle(0.2, x, push!, Int[], _->Int[])
+    `y = throttle(0.2, x, push!, Int[], _->Int[])`
 will create vectors of updates to the integer signal `x` which occur within 0.2 second time windows.
 
 """

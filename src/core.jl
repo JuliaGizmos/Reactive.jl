@@ -1,6 +1,8 @@
 import Base: push!, eltype, close
 export Signal, push!, value, preserve, unpreserve, close
 
+using DataStructures
+
 ##### Signal #####
 
 const debug_memory = false # Set this to true to debug gc of nodes
@@ -46,6 +48,9 @@ immutable Action
     recipient::WeakRef
     f::Function
 end
+
+const action_queue = OrderedDict{Signal, Action}()
+
 isrequired(a::Action) = a.recipient.value != nothing && a.recipient.value.alive
 
 Signal{T}(x::T, parents=()) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
@@ -127,7 +132,8 @@ function send_value!(node::Signal, x, timestep)
     # Set the value and do actions
     node.value = x
     for action in node.actions
-        do_action(action, timestep)
+        action.recipient.value != nothing && #nothing means downstream node has been gc'd
+            (action_queue[action.recipient.value] = action)
     end
 end
 send_value!(wr::WeakRef, x, timestep) = wr.value != nothing && send_value!(wr.value, x, timestep)
@@ -201,7 +207,11 @@ let timestep::Int = 0, stop_runner::Bool = false
         post_empty() # make sure it's not waiting on an empty message list
     end
 
-
+    Base.shift!(od::OrderedDict) = begin
+        firstkey = od |> keys |> first
+        res = od[firstkey]; delete!(od, firstkey)
+        firstkey=>res
+    end
 
     """
     Processes `n` messages from the Reactive event queue.
@@ -213,6 +223,10 @@ let timestep::Int = 0, stop_runner::Bool = false
                 isa(message, EmptyMessage) && continue # ignore emtpy messages
                 try
                     send_value!(message.node, message.value, timestep)
+                    while length(action_queue) > 0
+                        (node, action) = shift!(action_queue)
+                        do_action(action, timestep)
+                    end
                 catch err
                     if isa(err, InterruptException)
                         println("Reactive event loop was inturrupted.")
