@@ -148,7 +148,7 @@ Now that we have a signal of timestamps, we can use this to create a signal of c
 julia> anim = map(drawball, timestamps)
 ```
 
-**Try it.** The [Interact](https://github.com/JuliaLang/Interact.jl) package allows you to render `Signal` objects as they update over time in IJulia notebooks. Try the following code in an IJulia notebook to see the animation we just created.
+**Try it.** The [Interact](https://github.com/JuliaGizmos/Interact.jl) package allows you to render `Signal` objects as they update over time in IJulia notebooks. Try the following code in an IJulia notebook to see the animation we just created.
 
 ```{.julia execute="false"}
 using Reactive, Interact, Compose
@@ -342,7 +342,7 @@ throttle(1/100, sensor_input) # Update at most once in 10ms
 # Reactive in the wild
 Reactive is a great substrate to build interactive GUI libraries. Here are a few projects that make use of Reactive:
 
-* [Interact.jl](https://github.com/JuliaLang/Interact.jl)
+* [Interact.jl](https://github.com/JuliaGizmos/Interact.jl)
 * [Escher.jl](https://github.com/shashi/Escher.jl)
 * [GLPlot.jl](https://github.com/SimonDanisch/GLPlot.jl)
 
