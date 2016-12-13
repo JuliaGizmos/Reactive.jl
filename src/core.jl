@@ -49,7 +49,7 @@ immutable Action
     f::Function
 end
 
-const action_queue = OrderedDict{Signal, Action}()
+const action_queue = Queue(Tuple{Signal, Action})
 
 isrequired(a::Action) = a.recipient.value != nothing && a.recipient.value.alive
 
@@ -133,7 +133,7 @@ function send_value!(node::Signal, x, timestep)
     node.value = x
     for action in node.actions
         action.recipient.value != nothing && #nothing means downstream node has been gc'd
-            (action_queue[action.recipient.value] = action)
+            DataStructures.enqueue!(action_queue, (action.recipient.value, action))
     end
 end
 send_value!(wr::WeakRef, x, timestep) = wr.value != nothing && send_value!(wr.value, x, timestep)
@@ -207,11 +207,6 @@ let timestep::Int = 0, stop_runner::Bool = false
         post_empty() # make sure it's not waiting on an empty message list
     end
 
-    Base.shift!(od::OrderedDict) = begin
-        firstkey = od |> keys |> first
-        res = od[firstkey]; delete!(od, firstkey)
-        firstkey=>res
-    end
 
     """
     Processes `n` messages from the Reactive event queue.
@@ -224,7 +219,7 @@ let timestep::Int = 0, stop_runner::Bool = false
                 try
                     send_value!(message.node, message.value, timestep)
                     while length(action_queue) > 0
-                        (node, action) = shift!(action_queue)
+                        (node, action) = DataStructures.dequeue!(action_queue)
                         do_action(action, timestep)
                     end
                 catch err
