@@ -45,13 +45,13 @@ log_gc(n) =
     end
 
 immutable Action
-    recipient::WeakRef
+    recipient::Signal
     f::Function
 end
 
 const action_queue = Queue(Tuple{Signal, Action})
 
-isrequired(a::Action) = (a.recipient.value != nothing) && a.recipient.value.alive
+isrequired(a::Action) = a.recipient.alive
 
 Signal{T}(x::T, parents=()) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
 Signal{T}(::Type{T}, x, parents=()) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
@@ -102,7 +102,7 @@ eltype{T}(::Type{Signal{T}}) = T
 ##### Connections #####
 
 function add_action!(f, node, recipient)
-    a = Action(WeakRef(recipient), f)
+    a = Action(recipient, f)
     push!(node.actions, a)
     a
 end
@@ -132,14 +132,12 @@ function send_value!(node::Signal, x, timestep)
     # Set the value and do actions
     node.value = x
     for action in node.actions
-        action.recipient.value != nothing && #nothing means downstream node has been gc'd
-            DataStructures.enqueue!(action_queue, (action.recipient.value, action))
+        DataStructures.enqueue!(action_queue, (action.recipient, action))
     end
 end
-send_value!(wr::WeakRef, x, timestep) = wr.value != nothing && send_value!(wr.value, x, timestep)
 
 do_action(a::Action, timestep) =
-    isrequired(a) && a.f(a.recipient.value, timestep)
+    isrequired(a) && a.f(a.recipient, timestep)
 
 # If any actions have been gc'd, remove them
 cleanup_actions(node::Signal) =
@@ -150,9 +148,9 @@ cleanup_actions(node::Signal) =
 
 const CHANNEL_SIZE = 1024
 
-immutable Message
-    node
-    value
+immutable Message{T}
+    node::Signal{T}
+    value::T
     onerror::Function
 end
 
@@ -173,19 +171,16 @@ object, and `processed_bt` which is the backtrace of the exception.
 
 The default error callback will print the error and backtrace to STDERR.
 """
-Base.push!(n::Signal, x, onerror=print_error) = _push!(n, x, onerror)
-
-function _push!(n, x, onerror=print_error)
+function Base.push!{T}(n::Signal{T}, x, onerror=print_error)
     taken = Base.n_avail(_messages)
     if taken >= CHANNEL_SIZE
         warn("Message queue is full. Ordering may be incorrect.")
-        @async put!(_messages, Message(n, x, onerror))
+        @async put!(_messages, Message(n, convert(T, x), onerror))
     else
-        put!(_messages, Message(n, x, onerror))
+        put!(_messages, Message(n, convert(T, x), onerror))
     end
     nothing
 end
-_push!(::Void, x, onerror=print_error) = nothing
 
 const timestep = Ref{Int}(0)
 

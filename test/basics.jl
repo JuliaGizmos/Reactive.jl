@@ -22,8 +22,7 @@ facts("Basic checks") do
         step()
         @fact value(b) --> 1
         # InexactError to be precise
-        push!(a, 2.1, (n,x,err) -> @fact n --> a)
-        step()
+        @fact_throws InexactError push!(a, 2.1)
 
         @fact value(b) --> 1
 
@@ -73,7 +72,6 @@ facts("Basic checks") do
     context("foldp") do
 
         ## foldl over time
-        gc()
         push!(a, 0)
         step()
         f = foldp(+, 0, a)
