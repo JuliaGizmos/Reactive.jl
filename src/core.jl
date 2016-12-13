@@ -51,7 +51,7 @@ end
 
 const action_queue = Queue(Tuple{Signal, Action})
 
-isrequired(a::Action) = a.recipient.value != nothing && a.recipient.value.alive
+isrequired(a::Action) = (a.recipient.value != nothing) && a.recipient.value.alive
 
 Signal{T}(x::T, parents=()) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
 Signal{T}(::Type{T}, x, parents=()) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
@@ -149,18 +149,15 @@ cleanup_actions(node::Signal) =
 ##### Messaging #####
 
 const CHANNEL_SIZE = 1024
-abstract AbstractMessage
-immutable StopMessage <: AbstractMessage
-end
-immutable EmptyMessage <: AbstractMessage
-end
-immutable Message <: AbstractMessage
+
+immutable Message
     node
     value
     onerror::Function
 end
+
 # Global channel for signal updates
-const _messages = Channel{AbstractMessage}(CHANNEL_SIZE)
+const _messages = Channel{Nullable{Message}}(CHANNEL_SIZE)
 
 
 """
@@ -184,65 +181,54 @@ function _push!(n, x, onerror=print_error)
         warn("Message queue is full. Ordering may be incorrect.")
         @async put!(_messages, Message(n, x, onerror))
     else
-        put!(_messages, Message(WeakRef(n), x, onerror))
+        put!(_messages, Message(n, x, onerror))
     end
     nothing
 end
 _push!(::Void, x, onerror=print_error) = nothing
 
+const timestep = Ref{Int}(0)
+
+function break_loop()
+    put!(_messages, Nullable{Message}())
+end
+
+function stop()
+    run_till_now() # process all remaining events
+    break_loop()
+end
+
+
 """
-Convenience function to notify the Reactive event loop without pushing to
-a Signal.
+Processes `n` messages from the Reactive event queue.
 """
-post_empty() = put!(_messages, EmptyMessage())
-
-# remove messages from the channel and propagate them
-global run, stop
-
-let timestep::Int = 0, stop_runner::Bool = false
-
-    function stop()
-        run_till_now() # process all remaining events
-        stop_runner = true
-        post_empty() # make sure it's not waiting on an empty message list
-    end
-
-
-    """
-    Processes `n` messages from the Reactive event queue.
-    """
-    function run(n::Int)
+function run(n::Int=typemax(Int))
+    ts = timestep[]
+    try
         for i=1:n
-            timestep += 1
-            let message = take!(_messages)
-                isa(message, EmptyMessage) && continue # ignore emtpy messages
-                try
-                    send_value!(message.node, message.value, timestep)
-                    while length(action_queue) > 0
-                        (node, action) = DataStructures.dequeue!(action_queue)
-                        do_action(action, timestep)
-                    end
-                catch err
-                    if isa(err, InterruptException)
-                        println("Reactive event loop was inturrupted.")
-                        rethrow()
-                    else
-                        bt = catch_backtrace()
-                        message.onerror(message.node, message.value, CapturedException(err, bt))
-                    end
+            ts += 1
+            message = take!(_messages)
+            isnull(message) && break # ignore emtpy messages
+
+            msgval = get(message)
+            try
+                send_value!(msgval.node, msgval.value, ts)
+                while length(action_queue) > 0
+                    (node, action) = DataStructures.dequeue!(action_queue)
+                    do_action(action, ts)
+                end
+            catch err
+                if isa(err, InterruptException)
+                    println("Reactive event loop was inturrupted.")
+                    rethrow()
+                else
+                    bt = catch_backtrace()
+                    msgval.onerror(msgval.node, msgval.value, CapturedException(err, bt))
                 end
             end
         end
-        return
-    end
-    """
-    Processes messages as long as `stop` isn't called.
-    """
-    function run()
-        stop_runner = false
-        while !stop_runner
-            run(1)
-        end
+    finally
+        timestep[] = ts
     end
 end
 

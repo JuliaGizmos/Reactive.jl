@@ -3,7 +3,6 @@ using Reactive
 # Stop the runner task
 
 try
-    println("Killing ", Reactive.runner_task) # the task switch caused here is required!
     Reactive.stop()
 catch
 end
