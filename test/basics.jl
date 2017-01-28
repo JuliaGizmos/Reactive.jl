@@ -229,4 +229,22 @@ facts("Basic checks") do
         step()
         @fact value(y) --> 1
     end
+
+
+    context("bindind") do
+        x = Signal(0)
+        y = Signal(0)
+        bind!(y,x,false)
+
+        push!(x,1000)
+        step()
+
+        @fact value(y) --> 1000
+
+        unbind!(y,x,false)
+        push!(x,0)
+        step()
+
+        @fact value(y) --> 1000
+    end
 end
