@@ -297,7 +297,7 @@ function unbind!(a::Signal, b::Signal, twoway=true)
     end
 
     action = _bindings[a=>b]
-    a.actions = filter(x->x!=action, a.actions)
+    b.actions = filter(x->x!=action, b.actions)
     delete!(_bindings, a=>b)
 
     if twoway
