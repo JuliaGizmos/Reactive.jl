@@ -14,3 +14,6 @@ include("flatten.jl")
 include("time.jl")
 include("async.jl")
 FactCheck.exitstatus()
+
+# Newer Base.Test tests
+include("checked.jl")
