@@ -17,3 +17,4 @@ FactCheck.exitstatus()
 
 # Newer Base.Test tests
 include("checked.jl")
+include("arrays.jl")
