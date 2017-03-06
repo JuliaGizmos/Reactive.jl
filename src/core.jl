@@ -1,7 +1,9 @@
 import Base: push!, eltype, close
-export Signal, push!, value, preserve, unpreserve, close
+export AbstractSignal, Signal, CheckedSignal, push!, value, preserve, unpreserve, close
 
 using DataStructures
+
+abstract AbstractSignal{T}
 
 ##### Signal #####
 
@@ -11,7 +13,7 @@ const nodes = WeakKeyDict()
 const io_lock = ReentrantLock()
 
 if !debug_memory
-    type Signal{T}
+    type Signal{T} <: AbstractSignal{T}
         value::T
         parents::Tuple
         actions::Vector
@@ -19,7 +21,7 @@ if !debug_memory
         preservers::Dict
     end
 else
-    type Signal{T}
+    type Signal{T} <: AbstractSignal{T}
         value::T
         parents::Tuple
         actions::Vector
@@ -58,33 +60,36 @@ Signal{T}(::Type{T}, x, parents=()) = Signal{T}(x, parents, Action[], true, Dict
 # A signal of types
 Signal(t::Type) = Signal(Type, t)
 
+parents(s::Signal) = s.parents
+preservers(s::Signal) = s.preservers
+
 # preserve/unpreserve nodes from gc
 """
-    preserve(signal::Signal)
+    preserve(signal::AbstractSignal)
 
 prevents `signal` from being garbage collected as long as any of its parents are around. Useful for when you want to do some side effects in a signal.
 e.g. `preserve(map(println, x))` - this will continue to print updates to x, until x goes out of scope. `foreach` is a shorthand for `map` with `preserve`.
 """
-function preserve(x::Signal)
-    for p in x.parents
-        p.preservers[x] = get(p.preservers, x, 0)+1
+function preserve(x::AbstractSignal)
+    for p in parents(x)
+        preservers(p)[x] = get(preservers(p), x, 0)+1
         preserve(p)
     end
     x
 end
 
 """
-    unpreserve(signal::Signal)
+    unpreserve(signal::AbstractSignal)
 
 allow `signal` to be garbage collected. See also `preserve`.
 """
-function unpreserve(x::Signal)
-    for p in x.parents
-        n = get(p.preservers, x, 0)-1
+function unpreserve(x::AbstractSignal)
+    for p in parents(x)
+        n = get(preservers(p), x, 0)-1
         if n <= 0
-            delete!(p.preservers, x)
+            delete!(preservers(p), x)
         else
-            p.preservers[x] = n
+            preservers(p)[x] = n
         end
         unpreserve(p)
     end
@@ -98,6 +103,78 @@ value(n::Signal) = n.value
 value(::Void) = false
 eltype{T}(::Signal{T}) = T
 eltype{T}(::Type{Signal{T}}) = T
+
+##### CheckedSignal #######
+
+"""
+    CheckedSignal(val, bounds) -> cs
+
+Create a signal `cs` that throws an error if `push!(cs, val)` does not
+satisfy `bounds`. `bounds` can be a range object (in which case the
+value must be contained within the range) or a function (in which case
+`bounds(val)` must be `true`).
+
+A range-checked `CheckedSignal` may be used as an index in a `view`,
+in which case `bounds` must be equal to (or contained within) the
+indices for the corresponding dimension of the array.
+
+Example:
+```julia
+A = rand(5, 6)
+col = CheckedSignal(1, indices(A, 2))
+V = view(A, :, col)  # V == A[:,1]
+push!(col, 3)
+sleep(0.01)          # to let the Reactive.jl message queue run
+# Now V == A[:,3]
+```
+"""
+immutable CheckedSignal{T,B} <: AbstractSignal{T}
+    signal::Signal{T}
+    bounds::B
+
+    function (::Type{CheckedSignal{T,B}}){T,B}(signal::Signal{T}, bounds::B)
+        checkvalue(bounds, signal)
+        new{T,B}(signal, bounds)
+    end
+end
+CheckedSignal(value, bounds) = CheckedSignal(Signal(value), bounds)
+CheckedSignal{T,B}(signal::Signal{T}, bounds::B) = CheckedSignal{T,B}(signal, bounds)
+
+uncheckedsignal(s::Signal) = s
+uncheckedsignal(s::CheckedSignal) = s.signal
+
+bounds(s) = s
+bounds(s::CheckedSignal) = s.bounds
+
+checkvalue(bounds, signal::Signal) = checkvalue1(bounds, value(signal))
+checkvalue(bounds, val) = checkvalue1(bounds, val)
+@inline function checkvalue1(bounds::Range, val)
+    checkindex(Bool, bounds, val) || throw_checkederror(bounds, val)
+end
+@inline function checkvalue1(f::Function, val)
+    f(val) || throw_checkederror(f, val)
+end
+@noinline function throw_checkederror(bounds, val) # @noinline to prevent GC frame alloc.
+    # should ideally be InexactError or BoundsError, but those aren't flexible enough
+    throw(ArgumentError("CheckedSignal: $val is not within $bounds"))
+end
+@noinline function throw_checkederror(f::Function, val)
+    throw(ArgumentError("CheckedSignal: ($f)($val) was not true"))
+end
+
+value(s::CheckedSignal) = value(uncheckedsignal(s))
+parents(s::CheckedSignal) = parents(uncheckedsignal(s))
+preservers(s::CheckedSignal) = preservers(uncheckedsignal(s))
+
+function Base.push!(s::CheckedSignal, i)
+    checkvalue(bounds(s), i)
+    push!(uncheckedsignal(s), i)
+end
+
+function Base.map(f, s::Union{Signal,CheckedSignal}...)
+    map(f, map(uncheckedsignal, s)...)
+end
+
 
 ##### Connections #####
 
