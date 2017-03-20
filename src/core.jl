@@ -1,5 +1,5 @@
 import Base: push!, eltype, close
-export Signal, push!, value, preserve, unpreserve, close
+export Signal, push!, value, preserve, unpreserve, close, rename!
 
 using DataStructures
 
@@ -17,6 +17,7 @@ if !debug_memory
         actions::Vector
         alive::Bool
         preservers::Dict
+        name::String
     end
 else
     type Signal{T}
@@ -25,9 +26,10 @@ else
         actions::Vector
         alive::Bool
         preservers::Dict
+        name::String
         bt
-        function Signal(v, parents, actions, alive, pres)
-            n=new(v,parents,actions,alive,pres,backtrace())
+        function Signal(v, parents, actions, alive, pres, name)
+            n=new(v,parents,actions,alive,pres,name, backtrace())
             nodes[n] = nothing
             finalizer(n, log_gc)
             n
@@ -49,14 +51,32 @@ immutable Action
     f::Function
 end
 
+const node_count = DefaultDict{String,Int}(0) #counts of different signals for naming
+function auto_name!(name, parents...)
+    parents_str = join(map(s->s.name, parents), ", ")
+    isempty(parents_str) || (name *= "($parents_str)")
+    node_count[name] += 1
+    countstr = node_count[name] > 1 ? "-$(node_count[name])" : ""
+    "$name$countstr"
+end
+
+"""
+`rename!(s::Signal, name::String)`
+
+Change a Signal's name
+"""
+function rename!(s::Signal, name::String)
+    s.name = name
+end
+
 const action_queue = Queue(Tuple{Signal, Action})
 
 isrequired(a::Action) = (a.recipient.value != nothing) && a.recipient.value.alive
 
-Signal{T}(x::T, parents=()) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
-Signal{T}(::Type{T}, x, parents=()) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}())
+Signal{T}(x::T, parents=(); name::String=auto_name!("input")) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}(), name)
+Signal{T}(::Type{T}, x, parents=(); name::String=auto_name!("input")) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}(), name)
 # A signal of types
-Signal(t::Type) = Signal(Type, t)
+Signal(t::Type; name::String = auto_name!("input")) = Signal(Type, t, name)
 
 # preserve/unpreserve nodes from gc
 """
@@ -92,7 +112,7 @@ function unpreserve(x::Signal)
 end
 
 Base.show(io::IO, n::Signal) =
-    write(io, "Signal{$(eltype(n))}($(n.value), nactions=$(length(n.actions))$(n.alive ? "" : ", closed"))")
+    write(io, "$(n.name): Signal{$(eltype(n))}($(n.value), nactions=$(length(n.actions))$(n.alive ? "" : ", closed"))")
 
 value(n::Signal) = n.value
 value(::Void) = false
@@ -211,6 +231,7 @@ function run(n::Int=typemax(Int))
             isnull(message) && break # ignore emtpy messages
 
             msgval = get(message)
+            node = msgval.node
             try
                 send_value!(msgval.node, msgval.value, ts)
                 while length(action_queue) > 0
@@ -223,7 +244,7 @@ function run(n::Int=typemax(Int))
                     rethrow()
                 else
                     bt = catch_backtrace()
-                    msgval.onerror(msgval.node, msgval.value, CapturedException(err, bt))
+                    msgval.onerror(msgval.node, msgval.value, node, CapturedException(err, bt))
                 end
             end
         end
@@ -233,7 +254,7 @@ function run(n::Int=typemax(Int))
 end
 
 # Default error handler function
-function print_error(node, value, ex)
+function print_error(node, value, error_node, ex)
     lock(io_lock)
     io = STDERR
     println(io, "Failed to push!")
@@ -244,6 +265,8 @@ function print_error(node, value, ex)
     print(io, "    ")
     show(io, node)
     println(io)
+    println(io)
+    println(io, "error at node: $error_node")
     showerror(io, ex)
     println(io)
     unlock(io_lock)

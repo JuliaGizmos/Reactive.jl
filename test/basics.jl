@@ -22,7 +22,7 @@ facts("Basic checks") do
         step()
         @fact value(b) --> 1
         # InexactError to be precise
-        push!(a, 2.1, (n,x,err) -> @fact n --> a)
+        push!(a, 2.1, (n,x,error_node,err) -> @fact n --> a)
         step()
 
         @fact value(b) --> 1

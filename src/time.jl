@@ -12,8 +12,8 @@ For example
 will create vectors of updates to the integer signal `x` which occur within 0.2 second time windows.
 
 """
-function throttle{T}(dt, node::Signal{T}, f=(acc,x)->x, init=value(node), reinit=x->x; typ=typeof(init))
-    output = Signal(typ, init, (node,))
+function throttle{T}(dt, node::Signal{T}, f=(acc,x)->x, init=value(node), reinit=x->x; typ=typeof(init), name=auto_name!("throttle $(dt)s", node))
+    output = Signal(typ, init, (node,); name=name)
     throttle_connect(dt, output, node, f, init, reinit)
     output
 end
@@ -34,8 +34,8 @@ end
 
 A signal that updates every `dt` seconds to the current timestamp. Consider using `fpswhen` or `fps` before using `every`.
 """
-function every(dt)
-    n = Signal(time(), ())
+function every(dt; name=auto_name!("every $dt secs"))
+    n = Signal(time(), (); name=name)
     every_connect(dt, n)
     n
 end
@@ -52,9 +52,9 @@ end
 
 returns a signal which when `switch` signal is true, updates `rate` times every second. If `rate` is not possible to attain because of slowness in computing dependent signal values, the signal will self adjust to provide the best possible rate.
 """
-function fpswhen(switch, rate)
+function fpswhen(switch, rate; name=auto_name!("$rate fpswhen", switch))
     switch_ons = filter(x->x, false, switch) # only turn-ons
-    n = Signal(Float64, 0.0, (switch, switch_ons,))
+    n = Signal(Float64, 0.0, (switch, switch_ons,); name=name)
     fpswhen_connect(rate, switch, switch_ons, n)
     n
 end
@@ -90,4 +90,4 @@ end
 
 Same as `fpswhen(Input(true), rate)`
 """
-fps(rate) = fpswhen(Signal(Bool, true, ()), rate)
+fps(rate; name="$rate fps") = fpswhen(Signal(Bool, true, (); name="fps true"), rate; name=name)

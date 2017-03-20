@@ -6,7 +6,7 @@ end
 
 export map,
        probe,
-       filter, 
+       filter,
        filterwhen,
        foldp,
        sampleon,
@@ -24,9 +24,10 @@ export map,
 Transform signal `s` by applying `f` to each element. For multiple signal arguments, apply `f` elementwise.
 """
 function map(f, input::Signal, inputsrest::Signal...;
-             init=f(map(value, (input,inputsrest...))...), typ=typeof(init))
+             init=f(map(value, (input,inputsrest...))...),
+             typ=typeof(init), name=auto_name!("map", input, inputsrest...))
 
-    n = Signal(typ, init, (input,inputsrest...))
+    n = Signal(typ, init, (input,inputsrest...); name=name)
     connect_map(f, n, input, inputsrest...)
     n
 end
@@ -53,15 +54,15 @@ probe(node, name, io=STDERR) =
 
 Same as `map`, but will be prevented from gc until all the inputs have gone out of scope. Should be used in cases where `f` does a side-effect.
 """
-foreach(f, inputs::Signal...) = preserve(map(f, inputs...))
+foreach(f, inputs::Signal...; kwargs...) = preserve(map(f, inputs...; kwargs...))
 
 """
     filter(f, signal)
 
 remove updates from the signal where `f` returns `false`.
 """
-function filter{T}(f::Function, default, input::Signal{T})
-    n = Signal(T, f(value(input)) ? value(input) : default, (input,))
+function filter{T}(f::Function, default, input::Signal{T}; name=auto_name!("filter", input))
+    n = Signal(T, f(value(input)) ? value(input) : default, (input,); name=name)
     connect_filter(f, default, n, input)
     n
 end
@@ -80,8 +81,9 @@ Keep updates to `input` only when `switch` is true.
 
 If switch is false initially, the specified default value is used.
 """
-function filterwhen{T}(predicate::Signal{Bool}, default, input::Signal{T})
-    n = Signal(T, value(predicate) ? value(input) : default, (input,))
+function filterwhen{T}(predicate::Signal{Bool}, default, input::Signal{T};
+                        name=auto_name!("filterwhen", predicate, input))
+    n = Signal(T, value(predicate) ? value(input) : default, (input,); name=name)
     connect_filterwhen(n, predicate, input)
     n
 end
@@ -100,8 +102,8 @@ end
 Accumulate a value as the `input` signal changes. `init` is the initial value of the accumulator.
 `f` should take 2 arguments: the current accumulated value and the current update, and result in the next accumulated value.
 """
-function foldp(f::Function, v0, inputs...; typ=typeof(v0))
-    n = Signal(typ, v0, inputs)
+function foldp(f::Function, v0, inputs...; typ=typeof(v0), name=auto_name!("foldp", inputs...))
+    n = Signal(typ, v0, inputs; name=name)
     connect_foldp(f, v0, n, inputs)
     n
 end
@@ -123,8 +125,8 @@ end
 
 Sample the value of `b` whenever `a` updates.
 """
-function sampleon{T}(sampler, input::Signal{T})
-    n = Signal(T, value(input), (sampler, input))
+function sampleon{T}(sampler, input::Signal{T}; name=auto_name!("sampleon", input))
+    n = Signal(T, value(input), (sampler, input); name=name)
     connect_sampleon(n, sampler, input)
     n
 end
@@ -143,9 +145,9 @@ Merge many signals into one. Returns a signal which updates when
 any of the inputs update. If many signals update at the same time,
 the value of the *youngest* input signal is taken.
 """
-function merge(inputs...)
+function merge(inputs...; name=auto_name!("merge", inputs...))
     @assert length(inputs) >= 1
-    n = Signal(typejoin(map(eltype, inputs)...), value(inputs[1]), inputs)
+    n = Signal(typejoin(map(eltype, inputs)...), value(inputs[1]), inputs; name=name)
     connect_merge(n, inputs...)
     n
 end
@@ -155,7 +157,7 @@ function connect_merge(output, inputs...)
         for inp in inputs
             add_action!(inp, output) do output, timestep
                 # don't update twice in the same timestep
-                if prev_timestep != timestep 
+                if prev_timestep != timestep
                     send_value!(output, value(inp), timestep)
                     prev_time = timestep
                 end
@@ -170,8 +172,8 @@ end
 Create a signal which holds the previous value of `input`.
 You can optionally specify a different initial value.
 """
-function previous{T}(input::Signal{T}, default=value(input))
-    n = Signal(T, default, (input,))
+function previous{T}(input::Signal{T}, default=value(input); name=auto_name!("previous", input))
+    n = Signal(T, default, (input,); name=name)
     connect_previous(n, input)
     n
 end
@@ -193,8 +195,8 @@ throughout the signal graph.
 
 Returns the delayed signal.
 """
-function delay{T}(input::Signal{T}, default=value(input))
-    n = Signal(T, default, (input,))
+function delay{T}(input::Signal{T}, default=value(input); name=auto_name!("delay", input))
+    n = Signal(T, default, (input,); name=name)
     connect_delay(n, input)
     n
 end
@@ -211,8 +213,8 @@ end
 Drop updates to `input` whenever the new value is the same
 as the previous value of the signal.
 """
-function droprepeats{T}(input::Signal{T})
-    n = Signal(T, value(input), (input,))
+function droprepeats{T}(input::Signal{T}; name=auto_name!("droprepeats", input))
+    n = Signal(T, value(input), (input,); name=name)
     connect_droprepeats(n, input)
     n
 end
@@ -235,8 +237,8 @@ Flatten a signal of signals into a signal which holds the
 value of the current signal. The `typ` keyword argument specifies
 the type of the flattened signal. It is `Any` by default.
 """
-function flatten(input::Signal; typ=Any)
-    n = Signal(typ, value(value(input)), (input,))
+function flatten(input::Signal; typ=Any, name=auto_name!("flatten", input))
+    n = Signal(typ, value(value(input)), (input,); name=name)
     connect_flatten(n, input)
     n
 end
