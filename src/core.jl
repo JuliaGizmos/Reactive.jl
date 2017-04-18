@@ -124,6 +124,7 @@ eltype{T}(::Type{Signal{T}}) = T
 function add_action!(f, node, recipient)
     a = Action(WeakRef(recipient), f)
     push!(node.actions, a)
+    maybe_restart_queue()
     a
 end
 
@@ -275,9 +276,16 @@ end
 # Run everything queued up till the instant of calling this function
 run_till_now() = run(Base.n_avail(_messages))
 
-# A decent default runner task
-function __init__()
-    global runner_task = @async begin
-        Reactive.run()
+# Works around world age problems (see issue #131)
+function maybe_restart_queue()
+    global runner_task
+    if !istaskdone(runner_task)
+        stop()
+        wait(runner_task)
+        runner_task = @async run()
     end
+end
+
+function __init__()
+    global runner_task = @async run()
 end
