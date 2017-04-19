@@ -28,8 +28,8 @@ else
         preservers::Dict
         name::String
         bt
-        function Signal(v, parents, actions, alive, pres, name)
-            n=new(v,parents,actions,alive,pres,name, backtrace())
+        function (::Type{Signal{T}}){T}(v, parents, actions, alive, pres, name)
+            n=new{T}(v,parents,actions,alive,pres,name, backtrace())
             nodes[n] = nothing
             finalizer(n, log_gc)
             n

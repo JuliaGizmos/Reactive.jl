@@ -63,7 +63,7 @@ facts("Basic checks") do
         # precedence to b over a -- a is older.
         @fact value(e) --> value(b)
 
-        c = map(_->_, a) # Make a younger than b
+        c = map(identity, a) # Make a younger than b
         f = merge(d, c, b)
         push!(a, number())
         step()
