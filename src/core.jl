@@ -187,10 +187,14 @@ const _messages = Channel{Nullable{Message}}(CHANNEL_SIZE)
 Queue an update to a signal. The update will be propagated when all currently
 queued updates are done processing.
 
-The third optional argument is a callback to be called in case the update
-ends in an error. The callback receives 3 arguments: the signal, the value,
-and a `CapturedException` with the fields `ex` which is the original exception
-object, and `processed_bt` which is the backtrace of the exception.
+The third (optional) argument, `onerror`, is a callback triggered when
+the update ends in an error. The callback receives 4 arguments,
+`onerror(sig, val, node, capex)`, where `sig` and `val` are the Signal
+and value that `push!` was called with, respectively, `node` is the
+Signal whose action triggered the error, and `capex` is a
+`CapturedException` with the fields `ex` which is the original
+exception object, and `processed_bt` which is the backtrace of the
+exception.
 
 The default error callback will print the error and backtrace to STDERR.
 """
@@ -241,11 +245,18 @@ function run(n::Int=typemax(Int))
                 end
             catch err
                 if isa(err, InterruptException)
-                    println("Reactive event loop was inturrupted.")
+                    println("Reactive event loop was interrupted.")
                     rethrow()
                 else
                     bt = catch_backtrace()
-                    msgval.onerror(msgval.node, msgval.value, node, CapturedException(err, bt))
+                    try
+                        msgval.onerror(msgval.node, msgval.value, node, CapturedException(err, bt))
+                    catch err_onerror
+                        if isa(err_onerror, MethodError)
+                            println(STDERR, "The syntax for `onerror` has changed, see ?push!")
+                        end
+                        rethrow()
+                    end
                 end
             end
         end
