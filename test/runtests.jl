@@ -2,9 +2,9 @@ using Reactive
 
 # Stop the runner task
 
-try
+if !istaskdone(Reactive.runner_task)
     Reactive.stop()
-catch
+    wait(Reactive.runner_task)
 end
 
 include("basics.jl")
