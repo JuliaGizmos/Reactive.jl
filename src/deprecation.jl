@@ -1,4 +1,4 @@
-import Base: consume, foldl, call, @deprecate, @deprecate_binding
+import Base: consume, foldl, @deprecate, @deprecate_binding
 export lift, consume, foldl, keepwhen, keepif, dropif, dropwhen
 
 @deprecate_binding Input Signal
@@ -10,6 +10,3 @@ export lift, consume, foldl, keepwhen, keepif, dropif, dropwhen
 @deprecate keepif filter
 @deprecate dropif(f, default, signal) filter(x -> !f(x), default, signal)
 @deprecate dropwhen(predicate, x, signal) filterwhen(map(!, predicate), x, signal)
-if VERSION < v"0.5.0-dev"
-    @deprecate call{T}(::Type{Signal{T}}, x) Signal(T, x)
-end
