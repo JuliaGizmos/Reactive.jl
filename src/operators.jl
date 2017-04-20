@@ -54,7 +54,7 @@ probe(node, name, io=STDERR) =
 
 Same as `map`, but will be prevented from gc until all the inputs have gone out of scope. Should be used in cases where `f` does a side-effect.
 """
-foreach(f, inputs::Signal...; kwargs...) = preserve(map(f, inputs...; kwargs...))
+foreach(f, in1::Signal, inputs::Signal...; kwargs...) = preserve(map(f, in1, inputs...; kwargs...))
 
 """
     filter(f, signal)
@@ -139,16 +139,15 @@ end
 
 
 """
-    merge(input...)
+    merge(inputs...)
 
 Merge many signals into one. Returns a signal which updates when
 any of the inputs update. If many signals update at the same time,
 the value of the *youngest* input signal is taken.
 """
-function merge(inputs...; name=auto_name!("merge", inputs...))
-    @assert length(inputs) >= 1
-    n = Signal(typejoin(map(eltype, inputs)...), value(inputs[1]), inputs; name=name)
-    connect_merge(n, inputs...)
+function merge(in1::Signal, inputs::Signal...; name=auto_name!("merge", in1, inputs...))
+    n = Signal(typejoin(map(eltype, (in1, inputs...))...), value(in1), (in1, inputs...); name=name)
+    connect_merge(n, in1, inputs...)
     n
 end
 
