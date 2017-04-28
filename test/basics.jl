@@ -9,8 +9,8 @@ number() = round(Int, rand()*1000)
 
 facts("Basic checks") do
     x = Signal(Float32)
-    @test isa(x, Signal{Type{Float32}})
-    
+    @fact isa(x, Signal{Type{Float32}}) --> true
+
     a = Signal(number())
     b = map(x -> x*x, a)
 
