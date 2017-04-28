@@ -76,7 +76,7 @@ isrequired(a::Action) = (a.recipient.value != nothing) && a.recipient.value.aliv
 Signal{T}(x::T, parents=(); name::String=auto_name!("input")) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}(), name)
 Signal{T}(::Type{T}, x, parents=(); name::String=auto_name!("input")) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}(), name)
 # A signal of types
-Signal(t::Type; name::String = auto_name!("input")) = Signal(Type, t, name)
+Signal{T}(t::Type{T}; name::String = auto_name!("input")) = Signal(Type{T}, t, name = name)
 
 # preserve/unpreserve nodes from gc
 """
