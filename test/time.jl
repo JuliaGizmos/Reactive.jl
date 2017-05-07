@@ -1,4 +1,3 @@
-
 facts("Timing functions") do
 
     context("fpswhen") do
@@ -10,13 +9,16 @@ facts("Timing functions") do
         @fact queue_size() --> 0
         push!(b, true)
 
-        dt = @elapsed Reactive.run(3) # the first one starts the timer
+        step() # processing the push to b will start the fpswhen's timer
+        # then we wait for two pushes from the timer, which should take ~ 1sec
+        dt = @elapsed Reactive.run(2)
         push!(b, false)
-        Reactive.run(1)
+        Reactive.run(1) # setting b to false should stop the timer
 
-        sleep(0.11) # no more updates
+        sleep(0.75) # no more updates
         @fact queue_size() --> 0
 
+        @show dt
         @fact dt --> roughly(1, atol=0.25) # mac OSX needs a lot of tolerence here
         @fact value(acc) --> 2
 
@@ -43,9 +45,68 @@ facts("Timing functions") do
     end
 
     context("throttle") do
+        gc()
+        x = Signal(0; name="x")
+        ydt = 0.5
+        y′dt = 1.1
+        y = throttle(ydt, x; name="y", leading=false)
+        y′ = throttle(y′dt, x, push!, Int[], x->Int[]; name="y′", leading=false) # collect intermediate updates
+        z = foldp((acc, x) -> begin
+            println("z got ", x)
+            acc+1
+        end, 0, y)
+        z′ = foldp((acc, x) -> begin
+            println("z′ got ", x)
+            acc+1
+        end, 0, y′)
+        y′prev = previous(y′)
+
+        i = 0
+        sleep_time = 0.15
+        t0 = typemax(Float64)
+        # push and sleep for a bit, y and y′ should only update every ydt and
+        # y′dt seconds respectively
+        while time() - t0 <= 2.2
+            i += 1
+            push!(x, i)
+
+            Reactive.run_till_now()
+            t0 == typemax(Float64) && (t0 = time()) # start timer here to match signals
+            sleep(sleep_time)
+        end
+        dt = time() - t0
+        sleep(max(ydt,y′dt) + 0.1) # sleep for the trailing-edge pushes of the throttles
+        Reactive.run_till_now()
+
+        zcount = ceil(dt / ydt) # throttle should have pushed every ydt seconds
+        z′count = ceil(dt / y′dt) # throttle should have pushed every y′dt seconds
+
+        @show i dt ydt y′dt zcount z′count value(y) value(y′) value(z) value(z′)
+
+        @fact value(y) --> i
+        @fact value(z) --> roughly(zcount, atol=1)
+        @fact value(y′) --> [y′prev.value[end]+1 : i;]
+        @fact length(value(y′)) --> less_than(i/(z′count-1))
+        @fact value(z′) --> roughly(z′count, atol=1)
+
+        # type safety
+        s1 = Signal(3)
+        s2 = Signal(rand(2,2))
+        m = merge(s1, s2)
+        t = throttle(1/5, m; typ=Any)
+        r = rand(3,3)
+        push!(s2, r)
+        Reactive.run(1)
+        sleep(0.5)
+        # Reactive.run(1)
+        Reactive.run_till_now()
+        @fact value(t) --> r
+    end
+
+    context("debounce") do
         x = Signal(0)
-        y = throttle(0.5, x)
-        y′ = throttle(1, x, push!, Int[], x->Int[]) # collect intermediate updates
+        y = debounce(0.5, x)
+        y′ = debounce(1, x, push!, Int[], x->Int[]) # collect intermediate updates
         z = foldp((acc, x) -> acc+1, 0, y)
         z′ = foldp((acc, x) -> acc+1, 0, y′)
 
@@ -65,15 +126,15 @@ facts("Timing functions") do
 
         sleep(0.55)
 
-        @fact queue_size() --> 1
-        step()
+        @fact queue_size() --> 1 # y should have been pushed to by now
+        step() # run the push to y
         @fact value(y) --> 3
         @fact value(z) --> 1
         @fact value(z′) --> 0
         sleep(0.5)
 
-        @fact queue_size() --> 1
-        step()
+        @fact queue_size() --> 1 # y′ should have pushed by now
+        step() # run the push to y′
         @fact value(z′) --> 1
         @fact value(y′) --> Int[1,2,3]
 
@@ -85,9 +146,9 @@ facts("Timing functions") do
 
         push!(x, 1)
         step()
-        sleep(1)
+        sleep(1.1)
 
-        @fact queue_size() --> 2
+        @fact queue_size() --> 2 #both y and y′ should have pushed
         step()
         step()
         @fact value(y) --> 1
@@ -98,7 +159,7 @@ facts("Timing functions") do
         s1 = Signal(3)
         s2 = Signal(rand(2,2))
         m = merge(s1, s2)
-        t = throttle(1/5, m; typ=Any)
+        t = debounce(1/5, m; typ=Any)
         r = rand(3,3)
         push!(s2, r)
         Reactive.run(1)

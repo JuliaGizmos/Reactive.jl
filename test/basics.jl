@@ -1,9 +1,4 @@
-using FactCheck
 using Reactive
-
-step() = Reactive.run(1)
-queue_size() = Base.n_avail(Reactive._messages)
-number() = round(Int, rand()*1000)
 
 ## Basics
 
@@ -11,8 +6,8 @@ facts("Basic checks") do
     x = Signal(Float32)
     @fact isa(x, Signal{Type{Float32}}) --> true
 
-    a = Signal(number())
-    b = map(x -> x*x, a)
+    a = Signal(number(); name="a")
+    b = map(x -> x*x, a; name="b")
 
     context("map") do
 
@@ -38,24 +33,25 @@ facts("Basic checks") do
         @fact value(b) --> value(a)^2
 
         ## Multiple inputs to Lift
-        c = map(+, a, b, typ=Int)
-        @fact value(c) --> value(a) + value(b)
+        d = Signal(number())
+        c = map(+, a, b, d, typ=Int)
+        @fact value(c) --> value(a) + value(b) + value(d)
 
         push!(a, number())
         step()
-        @fact value(c) --> value(a) + value(b)
+        @fact value(c) --> value(a) + value(b) + value(d)
 
-        push!(b, number())
+
+        push!(d, number())
         step()
-        @fact value(c) --> value(a) + value(b)
+        @fact value(c) --> value(a) + value(b) + value(d)
     end
 
 
     context("merge") do
-
         ## Merge
-        d = Signal(number())
-        e = merge(d, b, a)
+        d = Signal(number(); name="d")
+        e = merge(b, d, a; name="e")
 
         # precedence to d
         @fact value(e) --> value(d)
@@ -63,6 +59,7 @@ facts("Basic checks") do
         push!(a, number())
         step()
         # precedence to b over a -- a is older.
+
         @fact value(e) --> value(b)
 
         c = map(identity, a) # Make a younger than b
@@ -75,11 +72,12 @@ facts("Basic checks") do
     context("foldp") do
 
         ## foldl over time
+
         gc()
         push!(a, 0)
         step()
         f = foldp(+, 0, a)
-        nums = round(Int, rand(100)*1000)
+        nums = round.([Int], rand(100)*1000)
         map(x -> begin push!(a, x); step() end, nums)
 
         @fact sum(nums) --> value(f)
@@ -104,21 +102,36 @@ facts("Basic checks") do
         @fact value(h) --> 3
     end
 
+    context("filter counts") do
+        a = Signal(1; name="a")
+        b = Signal(2; name="b")
+        c = filter(value(a), a; name="c") do aval; aval > 1 end
+        d = map(*,b,c)
+        count = foldp((x, y) -> x+1, 0, d)
+        @fact value(count) --> 0
+        push!(a, 0)
+        step()
+        @fact value(count) --> 0
+    end
+
     context("sampleon") do
         # sampleon
         g = Signal(0)
-
-        push!(g, number())
+        nv = number()
+        push!(g, nv)
+        println("step 1")
         step()
         i = Signal(true)
         j = sampleon(i, g)
         # default value
-        @fact value(j) --> value(g)
+        @fact value(j) --> value(g) # j == g == nv
         push!(g, value(g)-1)
+        println("step 2")
         step()
-        @fact value(j) --> value(g)+1
+        @fact value(j) --> value(g)+1 # g is nv - 1, j is unchanged on nv
         push!(i, true)
-        step()
+        println("step 3")
+        step() # resample
         @fact value(j) --> value(g)
     end
 
@@ -230,23 +243,61 @@ facts("Basic checks") do
 
         step()
         @fact value(y) --> 1
+        @fact queue_size() --> 0
     end
 
+    context("bind") do
+        x = Signal(0; name="x")
+        y = Signal(0; name="y")
+        zpre_count = 0
+        zpost_count = 0
+        zpre = map(yval->(zpre_count+=1; 2yval), y; name="zpre")
+        # map(...) runs the function once to get the init value on creation
+        @fact zpre_count --> 1
+        bind!(y, x)
+        @fact zpre_count --> 2 # initialising the bind should cause zpre to run too
+        zpost = map(yval->(zpost_count+=1; 2yval), y; name="zpost")
 
-    context("bindind") do
-        x = Signal(0)
-        y = Signal(0)
-        bind!(y,x,false)
+        @fact zpre_count --> 2
+        @fact zpost_count --> 1
 
+        @show queue_size()
         push!(x,1000)
         step()
 
         @fact value(y) --> 1000
+        @fact value(zpre) --> 2000
+        @fact value(zpost) --> 2000
+        @fact zpre_count --> 3
+        @fact zpost_count --> 2
+        @fact bound_srcs(y) --> [x]
+        @fact bound_dests(x) --> [y]
 
-        unbind!(y,x,false)
+        unbind!(y,x)
         push!(x,0)
         step()
 
         @fact value(y) --> 1000
+        @fact value(zpre) --> 2000
+        @fact value(zpost) --> 2000
+
+        # bind where dest is before src in node list
+        a = Signal(1; name="a")
+        b = map(x->2x, a; name="b")
+        c = Signal(1; name="c")
+        d = map(x->4x, c; name="d")
+        bind!(a, d)
+        @fact value(d) --> value(a)
+
+        @fact queue_size() --> 0
+
+        push!(c, 3)
+        @fact queue_size() --> 1
+        step()
+        @fact value(c) --> 3
+        @fact value(d) --> 4*3
+        @fact value(a) --> 4*3
+        @fact value(b) --> 2*4*3
     end
+    
 end

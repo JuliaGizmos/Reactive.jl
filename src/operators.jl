@@ -16,7 +16,9 @@ export map,
        droprepeats,
        flatten,
        bind!,
-       unbind!
+       unbind!,
+       bound_srcs,
+       bound_dests
 
 """
     map(f, s::Signal...) -> signal
@@ -33,16 +35,8 @@ function map(f, input::Signal, inputsrest::Signal...;
 end
 
 function connect_map(f, output, inputs...)
-    let prev_timestep = 0
-        for inp in inputs
-            add_action!(inp, output) do output, timestep
-                if prev_timestep != timestep
-                    result = f(map(value, inputs)...)
-                    send_value!(output, result, timestep)
-                    prev_timestep = timestep
-                end
-            end
-        end
+    add_action!(output) do
+        set_value!(output, f(map(value, inputs)...))
     end
 end
 
@@ -57,9 +51,11 @@ Same as `map`, but will be prevented from gc until all the inputs have gone out 
 foreach(f, in1::Signal, inputs::Signal...; kwargs...) = preserve(map(f, in1, inputs...; kwargs...))
 
 """
-    filter(f, signal)
+    filter(f, default, signal)
 
-remove updates from the signal where `f` returns `false`.
+remove updates from the `signal` where `f` returns `false`. The filter will hold
+the value default until f(value(signal)) returns true, when it will be updated
+to value(signal).
 """
 function filter{T}(f::Function, default, input::Signal{T}; name=auto_name!("filter", input))
     n = Signal(T, f(value(input)) ? value(input) : default, (input,); name=name)
@@ -68,9 +64,13 @@ function filter{T}(f::Function, default, input::Signal{T}; name=auto_name!("filt
 end
 
 function connect_filter(f, default, output, input)
-    add_action!(input, output) do output, timestep
+    add_action!(output) do
         val = value(input)
-        f(val) && send_value!(output, val, timestep)
+        if f(val)
+            set_value!(output, val)
+        else
+            deactivate!(output)
+        end
     end
 end
 
@@ -89,34 +89,36 @@ function filterwhen{T}(predicate::Signal{Bool}, default, input::Signal{T};
 end
 
 function connect_filterwhen(output, predicate, input)
-    add_action!(input, output) do output, timestep
-        value(predicate) && send_value!(output, value(input), timestep)
+    add_action!(output) do
+        if value(predicate)
+            set_value!(output, value(input))
+        else
+            deactivate!(output)
+        end
     end
 end
 
 """
-    foldp(f, init, input)
+    foldp(f, init, inputs...)
 
 [Fold](http://en.wikipedia.org/wiki/Fold_(higher-order_function)) over past values.
 
-Accumulate a value as the `input` signal changes. `init` is the initial value of the accumulator.
-`f` should take 2 arguments: the current accumulated value and the current update, and result in the next accumulated value.
+Accumulate a value as the input signals change. `init` is the initial value of the accumulator.
+`f` should take `1 + length(inputs)` arguments: the first is the current accumulated value and the rest are the current input signal values. `f` will be called when one or more of the `inputs` updates. It should return the next accumulated value.
 """
-function foldp(f::Function, v0, inputs...; typ=typeof(v0), name=auto_name!("foldp", inputs...))
-    n = Signal(typ, v0, inputs; name=name)
-    connect_foldp(f, v0, n, inputs)
+function foldp(f::Function, v0, input::Signal, inputsrest::Signal...;
+        typ=typeof(v0), name=auto_name!("foldp", input, inputsrest...))
+    n = Signal(typ, v0, (input, inputsrest...); name=name)
+    connect_foldp(f, v0, n, (input, inputsrest...))
     n
 end
 
 function connect_foldp(f, v0, output, inputs)
-    let acc = v0
-        for inp in inputs
-            add_action!(inp, output) do output, timestep
-                vals = map(value, inputs)
-                acc = f(acc, vals...)
-                send_value!(output, acc, timestep)
-            end
-        end
+    acc = v0
+    add_action!(output) do
+        vals = map(value, inputs)
+        acc = f(acc, vals...)
+        set_value!(output, acc)
     end
 end
 
@@ -125,44 +127,67 @@ end
 
 Sample the value of `b` whenever `a` updates.
 """
-function sampleon{T}(sampler, input::Signal{T}; name=auto_name!("sampleon", input))
-    n = Signal(T, value(input), (sampler, input); name=name)
-    connect_sampleon(n, sampler, input)
+function sampleon{T}(sample_trigger, input::Signal{T}; name=auto_name!("sampleon", input))
+    n = Signal(T, value(input), (sample_trigger,); name=name)
+    connect_sampleon(n, input)
     n
 end
 
-function connect_sampleon(output, sampler, input)
-    add_action!(sampler, output) do output, timestep
-        send_value!(output, value(input), timestep)
+function connect_sampleon(output, input)
+    # this will only get run when sampler updates, as sample_trigger is output's
+    # only parent
+    add_action!(output) do
+        set_value!(output, input.value)
     end
 end
-
 
 """
     merge(inputs...)
 
 Merge many signals into one. Returns a signal which updates when
 any of the inputs update. If many signals update at the same time,
-the value of the *youngest* input signal is taken.
+the value of the *youngest* (most recently created) input signal is taken.
 """
 function merge(in1::Signal, inputs::Signal...; name=auto_name!("merge", in1, inputs...))
-    n = Signal(typejoin(map(eltype, (in1, inputs...))...), value(in1), (in1, inputs...); name=name)
+    ins = (in1, inputs...)
+    youngestid = maximum(map(x->x.id, ins))
+    youngest_val = nodes[youngestid].value
+    n = Signal(typejoin(map(eltype, ins)...), value(youngest_val), ins; name=name)
     connect_merge(n, in1, inputs...)
     n
 end
 
 function connect_merge(output, inputs...)
-    let prev_timestep = 0
-        for inp in inputs
-            add_action!(inp, output) do output, timestep
-                # don't update twice in the same timestep
-                if prev_timestep != timestep
-                    send_value!(output, value(inp), timestep)
-                    prev_time = timestep
-                end
-            end
-        end
+    function merge_action()
+        lastactive = getlastactive(output)
+        lastactive != nothing && set_value!(output, value(lastactive))
+        # we don't deactivate! on lastactive == nothing, since I suppose the push
+        # should propagate even if some of the nodes died just after updating.
     end
+    add_action!(merge_action, output)
+end
+
+"""
+`getlastactive(merge_node)`
+Search backwards in nodes, and return the first active node that is one
+of merge_node's parents
+"""
+function getlastactive(merge_node)
+    i = merge_node.id - 1
+    while i > 0
+        node = nodes[i].value
+        if isactive(node) && node in merge_node.parents
+            return node
+        end
+        i -= 1
+    end
+    # If parent nodes have all been GC'd, but there is still a reference to the
+    # merge in user code, then none of the parents should have been active,
+    # so the merge action shouldn't run, so we shouldn't have got here. However,
+    # in the rare case that the node got GC'd after it was found to be an active
+    # parent of the merge but before we got here, then I guess the merge node
+    # shouldn't change value.
+    return nothing
 end
 
 """
@@ -178,11 +203,10 @@ function previous{T}(input::Signal{T}, default=value(input); name=auto_name!("pr
 end
 
 function connect_previous(output, input)
-    let prev_value = value(input)
-        add_action!(input, output) do output, timestep
-            send_value!(output, prev_value, timestep)
-            prev_value = value(input)
-        end
+    prev_value = value(input)
+    add_action!(output) do
+        set_value!(output, prev_value)
+        prev_value = value(input)
     end
 end
 
@@ -201,9 +225,12 @@ function delay{T}(input::Signal{T}, default=value(input); name=auto_name!("delay
 end
 
 function connect_delay(output, input)
-    add_action!(input, output) do output, timestep
-        push!(output, value(input))
+    function push_delayed(inpval)
+        # only push when input is active (avoids it pushing to itself endlessly)
+        push!(output, inpval)
+        nothing
     end
+    foreach(push_delayed, input; init=nothing)
 end
 
 """
@@ -219,12 +246,13 @@ function droprepeats{T}(input::Signal{T}; name=auto_name!("droprepeats", input))
 end
 
 function connect_droprepeats(output, input)
-    let prev_value = value(input)
-        add_action!(input, output) do output, timestep
-            if prev_value != value(input)
-                send_value!(output, value(input), timestep)
-                prev_value = value(input)
-            end
+    prev_value = value(input)
+    add_action!(output) do
+        if prev_value != value(input)
+            set_value!(output, value(input))
+            prev_value = value(input)
+        else
+            deactivate!(output)
         end
     end
 end
@@ -237,71 +265,147 @@ value of the current signal. The `typ` keyword argument specifies
 the type of the flattened signal. It is `Any` by default.
 """
 function flatten(input::Signal; typ=Any, name=auto_name!("flatten", input))
-    n = Signal(typ, value(value(input)), (input,); name=name)
+    n = Signal(typ, input.value.value, (input, input.value); name=name)
     connect_flatten(n, input)
     n
 end
 
+
+"""
+`connect_flatten(output, input)`
+`output` is the flatten node, `input` is the Signal{Signal} ("sigsig") node
+Descendents of this flatten node need to know to update on changes to
+the input sigsig (allroots(input)), or changes to the value of the
+current sig (roots == allroots(current_node))
+"""
 function connect_flatten(output, input)
-    let current_node = value(input),
-        callback = (output, timestep) -> begin
-            send_value!(output, value(value(input)), timestep)
-        end
-
-        add_action!(callback, current_node, output)
-
-        add_action!(input, output) do output, timestep
-
-            # Move around action from previous node to current one
-            remove_action!(callback, current_node, output)
-            current_node = value(input)
-            add_action!(callback, current_node, output)
-
-            send_value!(output, value(current_node), timestep)
+    # input is a Signal{Signal} (aka sigsig), current_node is the signal/node
+    # that is the input's current value. wire_flatten sets the flatten's
+    # parents, to (input, input.value), when the sigsig gets a new signal as its
+    # value. This ensures that both set_flatten_val and wire_flatten will be run
+    # (and flatten output node's value will update) when either the current_node
+    # updates, or when the input sigsig updates.
+    current_node = input.value
+    wire_flatten() = begin
+        # If the sigsig's value has changed update output's parents so it will
+        # only update when the new current_node updates, and no longer
+        # update when the previous signal updates.
+        if current_node != input.value
+            current_node = input.value
+            output.parents = (input, current_node)
         end
     end
+
+    set_flatten_val() = set_value!(output, current_node.value)
+    add_action!(wire_flatten, output)
+    add_action!(set_flatten_val, output) # this must come after wire_flatten
 end
 
-const _bindings = Dict()
+const _bindings = Dict() # XXX GC Issue? can't use WeakKeyDict with Pairs...
+const _active_binds = Dict()
 
 """
-    bind!(a,b,twoway=true)
+    `bind!(dest, src, twoway=true)`
 
-for every update to `a` also update `b` with the same value and vice-versa.
-To only bind updates from b to a, pass in a third argument as `false`
+for every update to `src` also update `dest` with the same value and, if
+`twoway` is true, vice-versa.
 """
-function bind!(a::Signal, b::Signal, twoway=true)
-
-    let current_timestep = 0
-        action = add_action!(b, a) do a, timestep
-            if current_timestep != timestep
-                current_timestep = timestep
-                send_value!(a, value(b), timestep)
-            end
+function bind!(dest::Signal, src::Signal, twoway=true)
+    if haskey(_bindings, src=>dest)
+        # subsequent bind!(dest, src) after initial should be a no-op
+        # though we should allow a change in preference for twoway bind.
+        if twoway
+            bind!(src, dest, false)
         end
-        _bindings[a=>b] = action
-    end
-
-    if twoway
-        bind!(b, a, false)
-    end
-end
-
-"""
-    unbind!(a,b,twoway=true)
-
-remove a link set up using `bind!`
-"""
-function unbind!(a::Signal, b::Signal, twoway=true)
-    if !haskey(_bindings, a=>b)
         return
     end
 
-    action = _bindings[a=>b]
-    b.actions = filter(x->x!=action, b.actions)
-    delete!(_bindings, a=>b)
+    # We don't set src as a parent of dest, since a
+    # two-way bind would technically introduce a cycle into the signal graph,
+    # and I suppose we'd prefer not to have that. Instead we just set dest as
+    # active when src updates, which will allow its downstream actions to run.
+
+    ordered_pair = src.id < dest.id ? src=>dest : dest=>src # ordered by id
+    twoway && (_active_binds[ordered_pair] = false)
+    # the binder action comes after dest, so dest's downstream actions
+    # won't run unless we arrange it.
+    function bind_updater(srcval)
+        if !haskey(_bindings, src=>dest)
+            # will happen if has been unbound but node not gc'd
+            return
+        end
+        is_twoway = haskey(_active_binds, ordered_pair)
+        if is_twoway && _active_binds[ordered_pair]
+            # The _active_binds flag stops the (infinite) cycle of src
+            # updating dest updating src ... in the case of a two-way bind
+            _active_binds[ordered_pair] = false
+        else
+            is_twoway && (_active_binds[ordered_pair] = true)
+            # we "pause" the current push!, simulate a push! to dest with
+            # run_push then resume processing the original push by reactivating
+            # the previously active nodes.
+            active_nodes = pause_push()
+            run_push(dest, src.value, onerror_rethrow, false) # false for dont_remove_dead - messes with active_nodes
+            foreach(activate!, active_nodes)
+        end
+        nothing
+    end
+    finalizer(src, (src)->unbind!(dest, src, twoway))
+
+    _bindings[src=>dest] = map(bind_updater, src; name="binder: $(src.name)=>$(dest.name)")
+    bind_updater(src.value) # init now that _bindings[src=>dest] is set
 
     if twoway
-        unbind!(b, a, false)
+        bind!(src, dest, false)
+    end
+
+end
+
+"""
+    `unbind!(dest, src, twoway=true)`
+
+remove a link set up using `bind!`
+"""
+function unbind!(dest::Signal, src::Signal, twoway=true)
+    if !haskey(_bindings, src=>dest)
+        return
+    end
+
+    _bindings[src=>dest] != nothing && close(_bindings[src=>dest])
+    delete!(_bindings, src=>dest)
+
+    ordered_pair = src.id < dest.id ? src=>dest : dest=>src # ordered by id
+    haskey(_active_binds, ordered_pair) && delete!(_active_binds, ordered_pair)
+
+    if twoway
+        unbind!(src, dest, false)
     end
 end
+
+"""
+Pause a push by recording the active nodes and setting them to inactive.
+The push can be resumed by reactivating the nodes.
+"""
+function pause_push()
+    active_nodes = WeakRef[]
+    for noderef in nodes
+        node = noderef.value
+        if isactive(node)
+            push!(active_nodes, WeakRef(node))
+            deactivate!(node)
+        end
+    end
+    active_nodes
+end
+
+"""
+`bound_dests(src::Signal)` returns a vector of all signals that will update when
+`src` updates, that were bound using `bind!(dest, src)`
+"""
+bound_dests(s::Signal) = [dest for (src, dest) in keys(_bindings) if src == s]
+
+"""
+`bound_srcs(dest::Signal)` returns a vector of all signals that will cause
+an update to `dest` when they update, that were bound using `bind!(dest, src)`
+"""
+bound_srcs(s::Signal) = [src for (src, dest) in keys(_bindings) if dest == s]

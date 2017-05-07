@@ -7,35 +7,57 @@ using DataStructures
 
 const debug_memory = false # Set this to true to debug gc of nodes
 
-const nodes = WeakKeyDict()
+const nodeset = WeakKeyDict()
 const io_lock = ReentrantLock()
 
 if !debug_memory
     type Signal{T}
+        id::Int # also its index into `nodes`, and `edges`
         value::T
         parents::Tuple
-        actions::Vector
-        alive::Bool
+        active::Bool
+        actions::Vector{Function}
         preservers::Dict
         name::String
+        function (::Type{Signal{T}}){T}(v, parents, pres, name)
+            id = length(nodes) + 1
+            n=new{T}(id, v, parents, false, Function[], pres, name)
+            push!(nodes, WeakRef(n))
+            push!(edges, Int[])
+            foreach(p->push!(edges[p.id], id), parents)
+            finalizer(n, schedule_node_cleanup)
+            n
+        end
     end
 else
     type Signal{T}
+        id::Int
         value::T
         parents::Tuple
+        active::Bool
         actions::Vector
-        alive::Bool
         preservers::Dict
         name::String
         bt
-        function (::Type{Signal{T}}){T}(v, parents, actions, alive, pres, name)
-            n=new{T}(v,parents,actions,alive,pres,name, backtrace())
-            nodes[n] = nothing
+        function (::Type{Signal{T}}){T}(v, parents, actions, pres, name)
+            id = length(nodes) + 1
+            n=new{T}(id, v, parents, false, Function[], pres, name, backtrace())
+            push!(nodes, WeakRef(n))
+            push!(edges, Int[])
+            foreach(p->push!(edges[p.id], id), parents)
+            nodeset[n] = nothing
             finalizer(n, log_gc)
             n
         end
     end
 end
+
+Signal{T}(x::T, parents=(); name::String=auto_name!("input")) =
+    Signal{T}(x, parents, Dict{Signal, Int}(), name)
+Signal{T}(::Type{T}, x, parents=(); name::String=auto_name!("input")) =
+    Signal{T}(x, parents, Dict{Signal, Int}(), name)
+# A signal of types
+Signal{T}(t::Type{T}; name::String = auto_name!("input")) = Signal(Type{T}, t, name=name)
 
 log_gc(n) =
     @async begin
@@ -46,10 +68,9 @@ log_gc(n) =
         unlock(io_lock)
     end
 
-immutable Action
-    recipient::WeakRef
-    f::Function
-end
+const nodes = WeakRef[] #stores the nodes in order of creation (which is a topological order for execution of the nodes' actions)
+
+const edges = Vector{Int}[] #parents to children, useful for plotting graphs
 
 const node_count = DefaultDict{String,Int}(0) #counts of different signals for naming
 function auto_name!(name, parents...)
@@ -68,15 +89,6 @@ Change a Signal's name
 function rename!(s::Signal, name::String)
     s.name = name
 end
-
-const action_queue = Queue(Tuple{Signal, Action})
-
-isrequired(a::Action) = (a.recipient.value != nothing) && a.recipient.value.alive
-
-Signal{T}(x::T, parents=(); name::String=auto_name!("input")) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}(), name)
-Signal{T}(::Type{T}, x, parents=(); name::String=auto_name!("input")) = Signal{T}(x, parents, Action[], true, Dict{Signal, Int}(), name)
-# A signal of types
-Signal{T}(t::Type{T}; name::String = auto_name!("input")) = Signal(Type{T}, t, name = name)
 
 # preserve/unpreserve nodes from gc
 """
@@ -111,8 +123,10 @@ function unpreserve(x::Signal)
     x
 end
 
-Base.show(io::IO, n::Signal) =
-    write(io, "$(n.name): Signal{$(eltype(n))}($(n.value), nactions=$(length(n.actions))$(n.alive ? "" : ", closed"))")
+Base.show(io::IO, n::Signal) = begin
+    active_str = isactive(n) ? "(active)" : ""
+    write(io, "$(n.id): \"$(n.name)\" = $(n.value) $(eltype(n)) $active_str")
+end
 
 value(n::Signal) = n.value
 value(::Void) = false
@@ -121,51 +135,62 @@ eltype{T}(::Type{Signal{T}}) = T
 
 ##### Connections #####
 
-function add_action!(f, node, recipient)
-    a = Action(WeakRef(recipient), f)
-    push!(node.actions, a)
+function add_action!(f, node)
+    push!(node.actions, f)
     maybe_restart_queue()
-    a
+    f
 end
 
-function remove_action!(f, node, recipient)
-    node.actions = filter(a -> a.f != f, node.actions)
+"""
+Removes `action` from `node.actions`
+"""
+function remove_action!(node, action)
+    filter!(a -> a != action, node.actions)
+    nothing
+end
+
+const run_remove_dead_nodes = Ref(false)
+"""
+Schedule a cleanup of dead nodes - called as a finalizer on each GC'd node
+"""
+function schedule_node_cleanup(n)
+    run_remove_dead_nodes[] = true
+end
+
+"""
+Remove GC'd nodes from `nodes`, is run before push! when scheduled.
+Not thread-safe in the sense that if it is run while other code is iterating
+through `nodes`, e.g. in run_push, iteration could skip nodes.
+"""
+function remove_dead_nodes!()
+    allnodes = [] # keep a ref to all nodes to avoid GC whilst in this function
+    filter!(nodes) do noderef
+        node = noderef.value
+        node != nothing && push!(allnodes, node)
+        node != nothing
+    end
+    foreach((i_n)->((i,n) = i_n; n.id = i), enumerate(allnodes)) # renumber nodes
+    reinit_edges!(allnodes)
+    nothing
+end
+
+function reinit_edges!(allnodes)
+    empty!(edges)
+    foreach(n->push!(edges,[]), allnodes)
+    foreach(allnodes) do n
+        foreach(p->push!(edges[p.id], n.id), n.parents)
+    end
+    nothing
 end
 
 function close(n::Signal, warn_nonleaf=true)
-    finalize(n) # stop timer etc.
-    n.alive = false
-    if !isempty(n.actions)
-        any(map(isrequired, n.actions)) && warn_nonleaf &&
-            warn("closing a non-leaf node is not a good idea")
-        empty!(n.actions)
-    end
-
     for p in n.parents
         delete!(p.preservers, n)
     end
+    finalize(n) # stop timer, schedule_node_cleanup, etc.
 end
 
-function send_value!(node::Signal, x, timestep)
-    # Dead node?
-    !node.alive && return
-
-    # Set the value and do actions
-    node.value = x
-    for action in node.actions
-        action.recipient.value != nothing && #nothing means downstream node has been gc'd
-            DataStructures.enqueue!(action_queue, (action.recipient.value, action))
-    end
-end
-send_value!(wr::WeakRef, x, timestep) = wr.value != nothing && send_value!(wr.value, x, timestep)
-
-do_action(a::Action, timestep) =
-    isrequired(a) && a.f(a.recipient.value, timestep)
-
-# If any actions have been gc'd, remove them
-cleanup_actions(node::Signal) =
-    node.actions = filter(isrequired, node.actions)
-
+set_value!(node::Signal, x) = (node.value = x)
 
 ##### Messaging #####
 
@@ -180,6 +205,9 @@ end
 # Global channel for signal updates
 const _messages = Channel{Nullable{Message}}(CHANNEL_SIZE)
 
+#run in asynchronous mode by default
+const async_mode = Ref(true)
+run_async(async::Bool) = (async_mode[] = async)
 
 """
 `push!(signal, value, onerror=Reactive.print_error)`
@@ -198,9 +226,15 @@ exception.
 
 The default error callback will print the error and backtrace to STDERR.
 """
-Base.push!(n::Signal, x, onerror=print_error) = _push!(n, x, onerror)
+function Base.push!(n::Signal, x, onerror=print_error)
+    if async_mode[]
+        async_push!(n, x, onerror)
+    else
+        run_push(n, x, onerror)
+    end
+end
 
-function _push!(n, x, onerror=print_error)
+function async_push!(n, x, onerror=print_error)
     taken = Base.n_avail(_messages)
     if taken >= CHANNEL_SIZE
         warn("Message queue is full. Ordering may be incorrect.")
@@ -210,12 +244,10 @@ function _push!(n, x, onerror=print_error)
     end
     nothing
 end
-_push!(::Void, x, onerror=print_error) = nothing
-
-const timestep = Ref{Int}(0)
 
 function break_loop()
     put!(_messages, Nullable{Message}())
+    yield()
 end
 
 function stop()
@@ -223,65 +255,114 @@ function stop()
     break_loop()
 end
 
-
 """
 Processes `n` messages from the Reactive event queue.
 """
 function run(n::Int=typemax(Int))
-    ts = timestep[]
-    try
-        for i=1:n
-            ts += 1
-            message = take!(_messages)
-            isnull(message) && break # ignore emtpy messages
+    for i=1:n
+        message = take!(_messages)
+        isnull(message) && break # break on null messages
 
-            msgval = get(message)
-            node = msgval.node
+        msgval = get(message)
+        run_push(msgval.node, msgval.value, msgval.onerror)
+    end
+end
+
+const debug_mode = Ref(false)
+set_debug_mode(val=true) = (debug_mode[] = val)
+
+runaction(f) = f()
+
+activate!(node::Signal) = (node.active = true)
+deactivate!(node::Signal) = (node.active = false)
+isactive(node::Signal) = node.active
+
+isactive(deadnode::Void) = false
+
+activate!(noderef::WeakRef) = (noderef.value != nothing &&
+                                (noderef.value.active = true))
+
+deactivate!(noderef::WeakRef) = (noderef.value != nothing &&
+                                (noderef.value.active = false))
+
+isactive(noderef::WeakRef) = (noderef.value != nothing && noderef.value.active)
+
+"""
+A node's actions should be run if any of its parents are active, since that
+generally means one (or more) of the parent nodes' values have changed. If the
+node doesn't have actions, don't set it to active, since its value won't be
+updated, meaning the update propagation can stop. N.b. The non-active when node
+has no actions mechanism is relied on for correct behaviour by fpswhen, and
+possibly other operators, i.e. it is not just an optimisation.
+"""
+function run_node(node::Signal)
+    if any(isactive, node.parents) && length(node.actions) > 0
+        activate!(node)
+        foreach(runaction, node.actions)
+    end
+end
+
+function run_push(pushnode::Signal, val, onerror, dont_remove_dead=false)
+    node = pushnode # ensure node is set for error reporting - see onerror below
+    try
+        if run_remove_dead_nodes[] && !dont_remove_dead
+            run_remove_dead_nodes[] = false
+            remove_dead_nodes!()
+        end
+        set_value!(pushnode, val)
+        activate!(pushnode)
+
+        # run the actions for all downstream nodes
+        for noderef in nodes[pushnode.id:end]
+            noderef.value == nothing && continue
+            node = noderef.value # node must be set here - see onerror call below
+            run_node(node)
+        end
+
+        # reset active status to false for pushnode and all downstream nodes
+        for noderef in nodes[pushnode.id:end]
+            noderef.value == nothing && continue
+            deactivate!(noderef.value)
+        end
+    catch err
+        if isa(err, InterruptException)
+            info("Reactive event loop was inturrupted.")
+            rethrow()
+        else
+            bt = catch_backtrace()
             try
-                send_value!(msgval.node, msgval.value, ts)
-                while length(action_queue) > 0
-                    (node, action) = DataStructures.dequeue!(action_queue)
-                    do_action(action, ts)
+                onerror(pushnode, val, node, CapturedException(err, bt))
+            catch err_onerror
+                if isa(err_onerror, MethodError)
+                    println(STDERR, "The syntax for `onerror` has changed, see ?push!")
                 end
-            catch err
-                if isa(err, InterruptException)
-                    println("Reactive event loop was interrupted.")
-                    rethrow()
-                else
-                    bt = catch_backtrace()
-                    try
-                        msgval.onerror(msgval.node, msgval.value, node, CapturedException(err, bt))
-                    catch err_onerror
-                        if isa(err_onerror, MethodError)
-                            println(STDERR, "The syntax for `onerror` has changed, see ?push!")
-                        end
-                        rethrow()
-                    end
-                end
+                rethrow()
             end
         end
-    finally
-        timestep[] = ts
     end
 end
 
 # Default error handler function
-function print_error(node, value, error_node, ex)
+function print_error(pushnode, val, error_node, ex)
     lock(io_lock)
     io = STDERR
     println(io, "Failed to push!")
     print(io, "    ")
-    show(io, value)
+    show(io, val)
     println(io)
     println(io, "to node")
     print(io, "    ")
-    show(io, node)
+    show(io, pushnode)
     println(io)
     println(io)
     println(io, "error at node: $error_node")
     showerror(io, ex)
     println(io)
     unlock(io_lock)
+end
+
+function onerror_rethrow(pushnode, val, error_node, ex)
+    rethrow()
 end
 
 # Run everything queued up till the instant of calling this function
