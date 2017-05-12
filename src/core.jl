@@ -373,7 +373,9 @@ function maybe_restart_queue()
     global runner_task
     if !istaskdone(runner_task)
         stop()
-        wait(runner_task)
+        if Base.n_avail(_messages) > 0
+            wait(runner_task)
+        end
         runner_task = @async run()
     end
 end
