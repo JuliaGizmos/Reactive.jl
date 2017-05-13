@@ -134,10 +134,14 @@ eltype{T}(::Signal{T}) = T
 eltype{T}(::Type{Signal{T}}) = T
 
 ##### Connections #####
-
+const restart_queue = Ref(false)
 function add_action!(f, node)
     push!(node.actions, f)
-    maybe_restart_queue()
+    if current_task() !== runner_task
+        maybe_restart_queue()
+    else
+        restart_queue[] = true
+    end
     f
 end
 
@@ -260,10 +264,12 @@ Processes `n` messages from the Reactive event queue.
 function run(n::Int=typemax(Int))
     for i=1:n
         message = take!(_messages)
+
         isnull(message) && break # break on null messages
 
         msgval = get(message)
         run_push(msgval.node, msgval.value, msgval.onerror)
+        restart_queue[] && maybe_restart_queue()
     end
 end
 
@@ -386,6 +392,7 @@ function maybe_restart_queue()
             runner_task = @async run()
         end
     end
+    restart_queue[] = false
 end
 
 function __init__()
