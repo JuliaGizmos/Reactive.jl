@@ -377,14 +377,15 @@ run_till_now() = run(Base.n_avail(_messages))
 function maybe_restart_queue()
     global runner_task
     if !istaskdone(runner_task)
-        stop() # calls run_till_now() then puts the break (null) message in _messages
-        if current_task() == runner_task
+        break_loop()
+        if current_task() === runner_task
             # will happen if `add_action!` is called while processing a push!
             prev_runner = current_task()
-            runner_task = @async begin
+            @async begin
                 # new runner should wait for current runner to process the
                 # break_loop (null) message
                 wait(prev_runner)
+                runner_task = current_task()
                 run()
             end
         else
