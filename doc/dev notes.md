@@ -11,12 +11,12 @@ Action updates the node whose `actions` Vector it's in with `set_value!` (pre-up
 1. merge (multiple parents)
 1. previous (caches the previous update)
 1. droprepeats (calls deactivate! when value(input) == prev_value)
-1. flatten (wire_flatten and set_flatten_val both get run whenever either the `current_node` or the `input` sigsig update. Would it be better to just add those actions to the input and current_node update respectively?)
+1. flatten (wire_flatten gets run whenever `input` sigsig updates. Uses `bind!` to update the flatten if the signal that is the `input` sigsig's current value (`current_node`) has its value updated).
 
 Action on an auxilliary node connected to the input that pushes to it, this allows the action to run, even if the node is a non-input, but gets pushed to
 1. throttle/debounce (the action is on a foreach on the input node, which sets up a timer to push to the throttle output node)
 1. delay (the action is on a foreach on the input node, which just pushes to the delay node)
-1. bind! (action is a `map` on the src node, which calls set_value! on the dest node, and returns nothing). , e.g. from test/basics.jl "non-input bind":
+1. bind! (action is a `map` on the src node, which calls set_value! on the dest node, and returns nothing). e.g. from test/basics.jl "non-input bind":
 ```
 s = Signal(1; name="sig 1")
 m = map(x->2x, s; name="m")

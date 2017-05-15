@@ -88,4 +88,35 @@ facts("Flatten") do
         @fact queue_size() --> 0
     end
 
+    context("Sigsig's value created after SigSig") do
+        # This is why we need bind! in flatten implementation rather than just
+        # setting the flatten's parents to (input, current_node) every time
+        # input updates. That won't work if the current_node was created after
+        # the flatten (e.g. in the below after pushing a new value to `a`),
+        # because updates to the current_node happen further down the `nodes`
+        # list than the flatten, so the flatten doesn't get updated.
+        a = Signal(number())
+        local b
+        c = foreach(a) do av
+                b = Signal(av)
+                foreach(identity, b)
+            end
+        d = flatten(c)
+        b_orig = b
+
+        @fact d.value --> a.value
+
+        push!(b, number())
+        step()
+        @fact d.value --> b.value
+
+        push!(a, number())
+        step()
+        @fact d.value --> a.value
+        @fact b_orig --> not(b)
+
+        push!(b, number())
+        step()
+        @fact d.value + 1 --> b.value + 1
+    end
 end
