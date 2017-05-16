@@ -265,7 +265,7 @@ value of the current signal. The `typ` keyword argument specifies
 the type of the flattened signal. It is `Any` by default.
 """
 function flatten(input::Signal; typ=Any, name=auto_name!("flatten", input))
-    n = Signal(typ, input.value.value, (input, input.value); name=name)
+    n = Signal(typ, input.value.value, (input,); name=name)
     connect_flatten(n, input)
     n
 end
@@ -273,32 +273,35 @@ end
 
 """
 `connect_flatten(output, input)`
-`output` is the flatten node, `input` is the Signal{Signal} ("sigsig") node
-Descendents of this flatten node need to know to update on changes to
-the input sigsig (allroots(input)), or changes to the value of the
-current sig (roots == allroots(current_node))
+
+`output` is the flatten node, `input` is the Signal{Signal} ("sigsig") node. The
+flatten needs to update on changes to the input sigsig, or changes to the value
+of the current sig (`current_node`). The former is achieved through a foreach `wire_flatten`
+attached to the input sigsig. The latter is achieved through binding the flatten
+to `current_node`.
 """
 function connect_flatten(output, input)
     # input is a Signal{Signal} (aka sigsig), current_node is the signal/node
-    # that is the input's current value. wire_flatten sets the flatten's
-    # parents, to (input, input.value), when the sigsig gets a new signal as its
-    # value. This ensures that both set_flatten_val and wire_flatten will be run
-    # (and flatten output node's value will update) when either the current_node
-    # updates, or when the input sigsig updates.
+    # that is the input's current value. wire_flatten will run when the sigsig gets a new signal as its
+    # value. This ensures that set_flatten_val will be run (and flatten output
+    # node's value will update) when either the current_node updates, or when
+    # the input sigsig updates.
     current_node = input.value
     wire_flatten() = begin
         # If the sigsig's value has changed update output's parents so it will
         # only update when the new current_node updates, and no longer
         # update when the previous signal updates.
         if current_node != input.value
+            unbind!(output, current_node, false)
             current_node = input.value
-            output.parents = (input, current_node)
+            bind!(output, current_node, false)
+            # the bind will have run downstream actions - avoid doubling up
+            deactivate!(output)
         end
     end
 
-    set_flatten_val() = set_value!(output, current_node.value)
     add_action!(wire_flatten, output)
-    add_action!(set_flatten_val, output) # this must come after wire_flatten
+    bind!(output, current_node, false)
 end
 
 const _bindings = Dict() # XXX GC Issue? can't use WeakKeyDict with Pairs...
@@ -345,7 +348,10 @@ function bind!(dest::Signal, src::Signal, twoway=true)
             # run_push then resume processing the original push by reactivating
             # the previously active nodes.
             active_nodes = pause_push()
-            run_push(dest, src.value, onerror_rethrow, false) # false for dont_remove_dead - messes with active_nodes
+            # `true` below is for dont_remove_dead nodes - messes with active_nodes
+            # TODO - check that - not sure it actually does, this may be a relic
+            # of an earlier implementation which used the node's id's
+            run_push(dest, src.value, onerror_rethrow, true)
             foreach(activate!, active_nodes)
         end
         nothing
