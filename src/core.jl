@@ -134,10 +134,14 @@ eltype{T}(::Signal{T}) = T
 eltype{T}(::Type{Signal{T}}) = T
 
 ##### Connections #####
-
+const restart_queue = Ref(false)
 function add_action!(f, node)
     push!(node.actions, f)
-    maybe_restart_queue()
+    if current_task() !== runner_task
+        maybe_restart_queue()
+    else
+        restart_queue[] = true
+    end
     f
 end
 
@@ -247,7 +251,6 @@ end
 
 function break_loop()
     put!(_messages, Nullable{Message}())
-    yield()
 end
 
 function stop()
@@ -261,10 +264,12 @@ Processes `n` messages from the Reactive event queue.
 function run(n::Int=typemax(Int))
     for i=1:n
         message = take!(_messages)
+
         isnull(message) && break # break on null messages
 
         msgval = get(message)
         run_push(msgval.node, msgval.value, msgval.onerror)
+        restart_queue[] && maybe_restart_queue()
     end
 end
 
@@ -372,12 +377,23 @@ run_till_now() = run(Base.n_avail(_messages))
 function maybe_restart_queue()
     global runner_task
     if !istaskdone(runner_task)
-        stop()
-        if Base.n_avail(_messages) > 0
+        break_loop()
+        if current_task() === runner_task
+            # will happen if `add_action!` is called while processing a push!
+            prev_runner = current_task()
+            @async begin
+                # new runner should wait for current runner to process the
+                # break_loop (null) message
+                wait(prev_runner)
+                runner_task = current_task()
+                run()
+            end
+        else
             wait(runner_task)
+            runner_task = @async run()
         end
-        runner_task = @async run()
     end
+    restart_queue[] = false
 end
 
 function __init__()
