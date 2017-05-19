@@ -308,11 +308,12 @@ const _bindings = Dict() # XXX GC Issue? can't use WeakKeyDict with Pairs...
 const _active_binds = Dict()
 
 """
-    `bind!(dest, src, twoway=true, initial=true)`
+    `bind!(dest, src, twoway=true; initial=true)`
 
 for every update to `src` also update `dest` with the same value and, if
-`twoway` is true, vice-versa, if `initial` is false, `dest` and `src` are
-not the same and `dest` doesn't get updated until `src` gets updated next.
+`twoway` is true, vice-versa. If `initial` is false, `dest` will only be updated
+to `src`'s value when `src` next updates, otherwise (if `initial` is true) both
+`dest` and `src` will take `src`'s value immediately.
 """
 function bind!(dest::Signal, src::Signal, twoway=true; initial=true)
     if haskey(_bindings, src=>dest)
