@@ -308,12 +308,14 @@ const _bindings = Dict() # XXX GC Issue? can't use WeakKeyDict with Pairs...
 const _active_binds = Dict()
 
 """
-    `bind!(dest, src, twoway=true)`
+    `bind!(dest, src, twoway=true; initial=true)`
 
 for every update to `src` also update `dest` with the same value and, if
-`twoway` is true, vice-versa.
+`twoway` is true, vice-versa. If `initial` is false, `dest` will only be updated
+to `src`'s value when `src` next updates, otherwise (if `initial` is true) both
+`dest` and `src` will take `src`'s value immediately.
 """
-function bind!(dest::Signal, src::Signal, twoway=true)
+function bind!(dest::Signal, src::Signal, twoway=true; initial=true)
     if haskey(_bindings, src=>dest)
         # subsequent bind!(dest, src) after initial should be a no-op
         # though we should allow a change in preference for twoway bind.
@@ -359,7 +361,7 @@ function bind!(dest::Signal, src::Signal, twoway=true)
     finalizer(src, (src)->unbind!(dest, src, twoway))
 
     _bindings[src=>dest] = map(bind_updater, src; name="binder: $(src.name)=>$(dest.name)")
-    bind_updater(src.value) # init now that _bindings[src=>dest] is set
+    initial && bind_updater(src.value) # init now that _bindings[src=>dest] is set
 
     if twoway
         bind!(src, dest, false)
