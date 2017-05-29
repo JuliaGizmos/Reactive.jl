@@ -254,8 +254,13 @@ function break_loop()
 end
 
 function stop()
+    global runner_task
     run_till_now() # process all remaining events
     break_loop()
+    # it seems to take a long time until the runner_task is actually finished
+    # which can be enough to run into maybe_restart_queue with !isdone(runner_task)
+    # see #144
+    wait(runner_task)
 end
 
 """
