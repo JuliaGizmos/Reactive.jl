@@ -5,7 +5,6 @@ using FactCheck
 
 if !istaskdone(Reactive.runner_task)
     Reactive.stop()
-    wait(Reactive.runner_task)
 end
 
 step() = Reactive.run(1)
