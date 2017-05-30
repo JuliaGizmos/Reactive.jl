@@ -3,10 +3,13 @@ using FactCheck
 
 # Stop the runner task
 
-if !istaskdone(Reactive.runner_task)
+
+facts("Queue runner") do
+    @fact istaskdone(Reactive.runner_task) --> false
     Reactive.stop()
-    wait(Reactive.runner_task)
+    @fact istaskdone(Reactive.runner_task) --> true
 end
+
 
 step() = Reactive.run(1)
 queue_size() = Base.n_avail(Reactive._messages)
