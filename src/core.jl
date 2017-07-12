@@ -128,6 +128,7 @@ Base.show(io::IO, n::Signal) = begin
     write(io, "$(n.id): \"$(n.name)\" = $(n.value) $(eltype(n)) $active_str")
 end
 
+value(n) = n
 value(n::Signal) = n.value
 value(::Void) = false
 eltype{T}(::Signal{T}) = T
