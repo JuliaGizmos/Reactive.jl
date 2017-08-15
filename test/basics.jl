@@ -100,6 +100,18 @@ facts("Basic checks") do
         push!(g, 3)
         step()
         @fact value(h) --> 3
+
+        g = Signal(0)
+        pred = x -> x % 2 != 0
+        h = filter(pred, g)
+
+        push!(g, 2)
+        step()
+        @fact value(h) --> 0
+
+        push!(g, 3)
+        step()
+        @fact value(h) --> 3
     end
 
     context("filter counts") do

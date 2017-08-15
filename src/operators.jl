@@ -63,6 +63,14 @@ function filter{T}(f::Function, default, input::Signal{T}; name=auto_name!("filt
     n
 end
 
+"""
+    filter(f, signal)
+
+remove updates from the `signal` where `f` returns `false`. The filter will hold
+the current value of the signal until `f(value(signal))` returns true.
+"""
+filter{T}(f::Function, input::Signal{T}; kwargs...) = filter(f, value(input), input; kwargs...)
+
 function connect_filter(f, default, output, input)
     add_action!(output) do
         val = value(input)
