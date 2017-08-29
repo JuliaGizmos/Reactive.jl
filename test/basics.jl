@@ -310,6 +310,62 @@ facts("Basic checks") do
         @fact value(d) --> 4*3
         @fact value(a) --> 4*3
         @fact value(b) --> 2*4*3
+
+        # check all the modified binds
+        src = Signal(false)
+        dst = Signal(false)
+        bind!(dst, !, src)
+        @fact value(dst) --> not(value(src))
+        push!(src, true)
+        step()
+        @fact value(src) --> not(value(dst))
+        push!(dst, true)
+        step()
+        @fact value(dst) --> value(src)
+
+        src = Signal(true)
+        dst = Signal(true)
+        bind!(dst, !, src, !)
+        @fact value(dst) --> not(value(src))
+        push!(src, true)
+        step()
+        @fact value(src) --> not(value(dst))
+        push!(dst, true)
+        step()
+        @fact value(dst) --> not(value(src))
+
+        src = Signal(true)
+        dst = Signal(true)
+        bind!(dst, !, src, initial=false)
+        @fact value(dst) --> value(src)
+        push!(src, true)
+        step()
+        @fact value(src) --> not(value(dst))
+        push!(dst, true)
+        step()
+        @fact value(dst) --> value(src)
+
+        # this doesn't work
+        # src = Signal(true)
+        # dst = Signal(true)
+        # bind!(dst, !, src, !, initial=false)
+        # @fact value(dst) --> value(src)
+        # push!(src, true)
+        # @fact value(src) --> not(value(dst))
+        # push!(dst, true)
+        # @fact value(dst) --> not(value(src))
+
+        src = Signal(30.0)
+        dst = Signal(sind(30.0))
+        bind!(dst, sind, src, asind)
+
+        push!(src, 0.0)
+        step()
+        @fact value(dst) --> 0
+        push!(dst, 0.5)
+        step()
+        @fact value(src) --> roughly(30)
+
     end
-    
+
 end
