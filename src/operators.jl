@@ -370,6 +370,26 @@ function bind!(dest::Signal, src::Signal, twoway=true; initial=true)
 end
 
 """
+    `bind!(dest, src2dest, src, dest2src=nothing; initial=true)`
+
+for every update to `src` also update `dest` with a modified value (using the
+function `src2dest`) and, if `dest2src` is supplied, a two-way update will hold.
+If `initial` is false, `dest` will only be updated to `src`'s modified value
+when `src` next updates, otherwise (if `initial` is true) both `dest` and `src`
+will take the respective's modiefied values immediately. Note that currently 
+this can not be `unbind!`. Also note that for a two-way bind, a false initial
+is impossible.
+"""
+function bind!(dest::Signal, src2dest::Function, src::Signal, dest2src = nothing; initial = true)
+    dest2 = map(src2dest, src)
+    bind!(dest, dest2, false, initial = initial)
+    if dest2src ≠ nothing
+        src2 = map(dest2src, dest)
+        bind!(src2, src, true, initial = initial)
+    end
+end
+
+"""
     `unbind!(dest, src, twoway=true)`
 
 remove a link set up using `bind!`
