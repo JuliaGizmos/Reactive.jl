@@ -299,60 +299,88 @@ facts("Basic checks") do
         @fact value(a) --> 4*3
         @fact value(b) --> 2*4*3
 
-        # check all the modified binds
-        src = Signal(false)
-        dst = Signal(false)
-        bind!(dst, !, src)
-        @fact value(dst) --> not(value(src))
-        push!(src, true)
-        step()
-        @fact value(src) --> not(value(dst))
-        push!(dst, true)
-        step()
-        @fact value(dst) --> value(src)
+    end
 
-        src = Signal(true)
-        dst = Signal(true)
-        bind!(dst, !, src, !)
-        @fact value(dst) --> not(value(src))
-        push!(src, true)
-        step()
-        @fact value(src) --> not(value(dst))
-        push!(dst, true)
-        step()
-        @fact value(dst) --> not(value(src))
+    context("bindmap") do
 
-        src = Signal(true)
-        dst = Signal(true)
-        bind!(dst, !, src, initial=false)
-        @fact value(dst) --> value(src)
-        push!(src, true)
-        step()
-        @fact value(src) --> not(value(dst))
-        push!(dst, true)
-        step()
-        @fact value(dst) --> value(src)
+        src2dst(x) = x + 2
+        dst2src(x) = x - 2
 
-        # this doesn't work
-        # src = Signal(true)
-        # dst = Signal(true)
-        # bind!(dst, !, src, !, initial=false)
-        # @fact value(dst) --> value(src)
-        # push!(src, true)
-        # @fact value(src) --> not(value(dst))
-        # push!(dst, true)
-        # @fact value(dst) --> not(value(src))
-
-        src = Signal(30.0)
-        dst = Signal(sind(30.0))
-        bind!(dst, sind, src, asind)
-
-        push!(src, 0.0)
+        # oneway with initiation
+        src = Signal(3)
+        dst = Signal(0)
+        bindmap!(dst, src2dst, src)
+        @fact value(dst) --> 5
+        push!(src, 2)
         step()
+        @fact value(dst) --> 4
+        push!(dst, 5)
+        step()
+        @fact value(src) --> 2
+        unbind!(dst,src)
+        push!(src,1)
+        step()
+        @fact value(dst) --> 5
+
+        # twoway with initiation
+        src = Signal(3)
+        dst = Signal(0)
+        bindmap!(dst, src2dst, src, dst2src)
+        @fact value(dst) --> 5
+        push!(src, 2)
+        step()
+        @fact value(dst) --> 4
+        push!(dst, 5)
+        step()
+        @fact value(src) --> 3
+        unbind!(dst,src,false) # test oneway first
+        push!(src,1)
+        step()
+        @fact value(dst) --> 5
+        push!(dst,1)
+        step()
+        @fact value(src) --> -1
+
+        # This should work but I think line 444 in operators.jl shouldn't exit if the twoway unbind! was applied after a oneway unbind!.
+        # unbind!(dst,src) # test other way as well
+        # push!(dst,2)
+        # step()
+        # @fact value(src) --> -1
+
+        # oneway without initiation
+        src = Signal(3)
+        dst = Signal(0)
+        bindmap!(dst, src2dst, src, initial=false)
         @fact value(dst) --> 0
-        push!(dst, 0.5)
+        push!(src, 2)
         step()
-        @fact value(src) --> roughly(30)
+        @fact value(dst) --> 4
+        push!(dst, 5)
+        step()
+        @fact value(src) --> 2
+        unbind!(dst,src)
+        push!(src,1)
+        step()
+        @fact value(dst) --> 5
+
+        # twoway without initiation
+        src = Signal(3)
+        dst = Signal(0)
+        bindmap!(dst, src2dst, src, dst2src, initial=false)
+        @fact value(dst) --> 0
+        push!(src, 2)
+        step()
+        @fact value(dst) --> 4
+        push!(dst, 5)
+        step()
+        @fact value(src) --> 3
+        unbind!(dst,src)
+        push!(src,1)
+        step()
+        @fact value(dst) --> 5
+        push!(dst,2)
+        step()
+        @fact value(src) --> 1
 
     end
 
