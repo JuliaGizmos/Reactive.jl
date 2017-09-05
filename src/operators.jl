@@ -16,6 +16,7 @@ export map,
        droprepeats,
        flatten,
        bind!,
+       bindmap!,
        unbind!,
        bound_srcs,
        bound_dests
@@ -324,11 +325,27 @@ to `src`'s value when `src` next updates, otherwise (if `initial` is true) both
 `dest` and `src` will take `src`'s value immediately.
 """
 function bind!(dest::Signal, src::Signal, twoway=true; initial=true)
+    dest2src = twoway ? identity : nothing
+    bindmap!(dest, identity, src, dest2src)
+end
+
+
+"""
+    `bindmap!(dest::Signal, src2dest::Function, src::Signal, dest2src=nothing; initial=true)`
+
+for every update to `src` also update `dest` with a modified value (using the
+function `src2dest`) and, if `dest2src` is specified, a two-way update will hold.
+If `initial` is false, `dest` will only be updated to `src`'s modified value
+when `src` next updates, otherwise (if `initial` is true) both `dest` and `src`
+will take their respective modified values immediately. 
+"""
+function bindmap!(dest::Signal, src2dest::Function, src::Signal, dest2src = nothing; initial = true)
+    twoway = dest2src ≠ nothing
     if haskey(_bindings, src=>dest)
         # subsequent bind!(dest, src) after initial should be a no-op
         # though we should allow a change in preference for twoway bind.
         if twoway
-            bind!(src, dest, false)
+            bindmap!(src, dest2src, dest, initial = initial)
         end
         return
     end
@@ -361,7 +378,7 @@ function bind!(dest::Signal, src::Signal, twoway=true; initial=true)
             # `true` below is for dont_remove_dead nodes - messes with active_nodes
             # TODO - check that - not sure it actually does, this may be a relic
             # of an earlier implementation which used the node's id's
-            run_push(dest, src.value, onerror_rethrow, true)
+            run_push(dest, src2dest(src.value), onerror_rethrow, true) # here is the only place where we implement the modifying function!
             foreach(activate!, active_nodes)
         end
         nothing
@@ -372,7 +389,7 @@ function bind!(dest::Signal, src::Signal, twoway=true; initial=true)
     initial && bind_updater(src.value) # init now that _bindings[src=>dest] is set
 
     if twoway
-        bind!(src, dest, false)
+        bindmap!(src, dest2src, dest, initial = initial)
     end
 
 end
