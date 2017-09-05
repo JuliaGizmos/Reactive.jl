@@ -424,7 +424,7 @@ function bindmap!(dest::Signal, src2dest::Function, src::Signal, dest2src::Funct
         end
         nothing
     end
-    finalizer(src, (src)->unbindmap!(dest, src, twoway))
+    finalizer(src, (src)->unbind!(dest, src, twoway))
 
     _bindings[src=>dest] = map(bind_updater, src; name="binder: $(src.name)=>$(dest.name)")
     initial && bind_updater(src.value) # init now that _bindings[src=>dest] is set
