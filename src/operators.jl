@@ -26,11 +26,12 @@ export map,
 
 Transform signal `s` by applying `f` to each element. For multiple signal arguments, apply `f` elementwise.
 """
-function map(f, input::Signal, inputsrest::Signal...;
-             init=f(map(value, (input,inputsrest...))...),
-             typ=typeof(init), name=auto_name!("map", input, inputsrest...))
-
-    n = Signal(typ, init, (input,inputsrest...); name=name)
+function map(
+        f, input::Signal, inputsrest::Signal...;
+        init = f(map(value, (input, inputsrest...))...),
+        typ = typeof(init), name = auto_name!("map", input, inputsrest...)
+    )
+    n = Signal(typ, init, (input, inputsrest...); name = name)
     connect_map(f, n, input, inputsrest...)
     n
 end
@@ -337,7 +338,7 @@ for every update to `src` also update `dest` with a modified value (using the
 function `src2dest`) and, if `dest2src` is specified, a two-way update will hold.
 If `initial` is false, `dest` will only be updated to `src`'s modified value
 when `src` next updates, otherwise (if `initial` is true) both `dest` and `src`
-will take their respective modified values immediately. 
+will take their respective modified values immediately.
 """
 function bindmap!(dest::Signal, src2dest::Function, src::Signal, dest2src = nothing; initial = true)
     twoway = dest2src ≠ nothing
