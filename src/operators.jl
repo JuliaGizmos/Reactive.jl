@@ -123,11 +123,9 @@ function foldp(f::Function, v0, input::Signal, inputsrest::Signal...;
 end
 
 function connect_foldp(f, v0, output, inputs)
-    acc = v0
     add_action!(output) do
         vals = map(value, inputs)
-        acc = f(acc, vals...)
-        set_value!(output, acc)
+        set_value!(output, f(output.value, vals...))
     end
 end
 
@@ -337,7 +335,7 @@ for every update to `src` also update `dest` with a modified value (using the
 function `src2dest`) and, if `dest2src` is specified, a two-way update will hold.
 If `initial` is false, `dest` will only be updated to `src`'s modified value
 when `src` next updates, otherwise (if `initial` is true) both `dest` and `src`
-will take their respective modified values immediately. 
+will take their respective modified values immediately.
 """
 function bindmap!(dest::Signal, src2dest::Function, src::Signal, dest2src = nothing; initial = true)
     twoway = dest2src ≠ nothing
