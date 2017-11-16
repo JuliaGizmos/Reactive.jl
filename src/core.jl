@@ -10,6 +10,25 @@ const debug_memory = false # Set this to true to debug gc of nodes
 const nodeset = WeakKeyDict()
 const io_lock = ReentrantLock()
 
+const runner_task = Ref{Task}()
+
+const run_remove_dead_nodes = Ref(false)
+
+const CHANNEL_SIZE = 1024
+
+
+#run in asynchronous mode by default
+const async_mode = Ref(true)
+
+const debug_mode = Ref(false)
+
+const nodes = WeakRef[] #stores the nodes in order of creation (which is a topological order for execution of the nodes' actions)
+
+const edges = Vector{Int}[] #parents to children, useful for plotting graphs
+
+const node_count = Dict{String, Int}() #counts of different signals for naming
+
+
 if !debug_memory
     type Signal{T}
         id::Int # also its index into `nodes`, and `edges`
@@ -52,14 +71,14 @@ else
     end
 end
 
-Signal{T}(x::T, parents=(); name::String=auto_name!("input")) =
+Signal{T}(x::T, parents=(); name::String = auto_name!("input")) =
     Signal{T}(x, parents, Dict{Signal, Int}(), name)
-Signal{T}(::Type{T}, x, parents=(); name::String=auto_name!("input")) =
+Signal{T}(::Type{T}, x, parents=(); name::String = auto_name!("input")) =
     Signal{T}(x, parents, Dict{Signal, Int}(), name)
 # A signal of types
 Signal{T}(t::Type{T}; name::String = auto_name!("input")) = Signal(Type{T}, t, name=name)
 
-log_gc(n) =
+function log_gc(n)
     @async begin
         lock(io_lock)
         print(STDERR, "Signal got gc'd. Creation backtrace:")
@@ -67,17 +86,16 @@ log_gc(n) =
         println(STDOUT)
         unlock(io_lock)
     end
+end
 
-const nodes = WeakRef[] #stores the nodes in order of creation (which is a topological order for execution of the nodes' actions)
 
-const edges = Vector{Int}[] #parents to children, useful for plotting graphs
 
-const node_count = DefaultDict{String,Int}(0) #counts of different signals for naming
 function auto_name!(name, parents...)
     parents_str = join(map(s->s.name, parents), ", ")
     isempty(parents_str) || (name *= "($parents_str)")
-    node_count[name] += 1
-    countstr = node_count[name] > 1 ? "-$(node_count[name])" : ""
+    count = get!(node_count, name, 0) + 1
+    node_count[name] = count
+    countstr = count > 1 ? "-$(node_count[name])" : ""
     "$name$countstr"
 end
 
@@ -123,7 +141,7 @@ function unpreserve(x::Signal)
     x
 end
 
-Base.show(io::IO, n::Signal) = begin
+function Base.show(io::IO, n::Signal)
     active_str = isactive(n) ? "(active)" : ""
     write(io, "$(n.id): \"$(n.name)\" = $(n.value) $(eltype(n)) $active_str")
 end
@@ -131,6 +149,7 @@ end
 value(n) = n
 value(n::Signal) = n.value
 value(::Void) = false
+
 eltype{T}(::Signal{T}) = T
 eltype{T}(::Type{Signal{T}}) = T
 
@@ -138,7 +157,7 @@ eltype{T}(::Type{Signal{T}}) = T
 const restart_queue = Ref(false)
 function add_action!(f, node)
     push!(node.actions, f)
-    if current_task() !== runner_task
+    if current_task() !== runner_task[]
         maybe_restart_queue()
     else
         restart_queue[] = true
@@ -154,7 +173,6 @@ function remove_action!(node, action)
     nothing
 end
 
-const run_remove_dead_nodes = Ref(false)
 """
 Schedule a cleanup of dead nodes - called as a finalizer on each GC'd node
 """
@@ -181,9 +199,9 @@ end
 
 function reinit_edges!(allnodes)
     empty!(edges)
-    foreach(n->push!(edges,[]), allnodes)
+    foreach(n->push!(edges, []), allnodes)
     foreach(allnodes) do n
-        foreach(p->push!(edges[p.id], n.id), n.parents)
+        foreach(p-> push!(edges[p.id], n.id), n.parents)
     end
     nothing
 end
@@ -199,8 +217,6 @@ set_value!(node::Signal, x) = (node.value = x)
 
 ##### Messaging #####
 
-const CHANNEL_SIZE = 1024
-
 immutable Message
     node
     value
@@ -210,8 +226,6 @@ end
 # Global channel for signal updates
 const _messages = Channel{Nullable{Message}}(CHANNEL_SIZE)
 
-#run in asynchronous mode by default
-const async_mode = Ref(true)
 run_async(async::Bool) = (async_mode[] = async)
 
 """
@@ -231,7 +245,7 @@ exception.
 
 The default error callback will print the error and backtrace to STDERR.
 """
-function Base.push!(n::Signal, x, onerror=print_error)
+function Base.push!(n::Signal, x, onerror = print_error)
     if async_mode[]
         async_push!(n, x, onerror)
     else
@@ -255,13 +269,12 @@ function break_loop()
 end
 
 function stop()
-    global runner_task
     run_till_now() # process all remaining events
     break_loop()
     # it seems to take a long time until the runner_task is actually finished
     # which can be enough to run into maybe_restart_queue with !isdone(runner_task)
     # see #144
-    wait(runner_task)
+    wait(runner_task[])
 end
 
 """
@@ -279,8 +292,7 @@ function run(n::Int=typemax(Int))
     end
 end
 
-const debug_mode = Ref(false)
-set_debug_mode(val=true) = (debug_mode[] = val)
+set_debug_mode(val = true) = (debug_mode[] = val)
 
 runaction(f) = f()
 
@@ -313,7 +325,7 @@ function run_node(node::Signal)
     end
 end
 
-function run_push(pushnode::Signal, val, onerror, dont_remove_dead=false)
+function run_push(pushnode::Signal, val, onerror, dont_remove_dead = false)
     node = pushnode # ensure node is set for error reporting - see onerror below
     try
         if run_remove_dead_nodes[] && !dont_remove_dead
@@ -381,27 +393,26 @@ run_till_now() = run(Base.n_avail(_messages))
 
 # Works around world age problems (see issue #131)
 function maybe_restart_queue()
-    global runner_task
-    if !istaskdone(runner_task)
+    if !istaskdone(runner_task[])
         break_loop()
-        if current_task() === runner_task
+        if current_task() === runner_task[]
             # will happen if `add_action!` is called while processing a push!
             prev_runner = current_task()
             @async begin
                 # new runner should wait for current runner to process the
                 # break_loop (null) message
                 wait(prev_runner)
-                runner_task = current_task()
+                runner_task[] = current_task()
                 run()
             end
         else
-            wait(runner_task)
-            runner_task = @async run()
+            wait(runner_task[])
+            runner_task[] = @async run()
         end
     end
     restart_queue[] = false
 end
 
 function __init__()
-    global runner_task = @async run()
+    runner_task[] = @async run()
 end
