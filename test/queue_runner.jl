@@ -16,14 +16,14 @@ facts("Queue runner") do
         end
         function test_queue(expected_bcount, orig_runner)
             push!(a, 3)
-            wait(Reactive.runner_task)
+            wait(Reactive.runner_task[])
             @fact queue_size() --> 0
-            @fact orig_runner --> not(Reactive.runner_task) # we should have a new queue runner
+            @fact orig_runner --> not(Reactive.runner_task[]) # we should have a new queue runner
             @fact bcount --> expected_bcount
         end
         @fact bcount --> 0
-        test_queue(1, Reactive.runner_task)
-        test_queue(2, Reactive.runner_task)
+        test_queue(1, Reactive.runner_task[])
+        test_queue(2, Reactive.runner_task[])
     end
 
     context("Multiple queue restarts during a single action") do
@@ -43,14 +43,14 @@ facts("Queue runner") do
         end
         function test_queue(expected_bcount, orig_runner)
             push!(a, 3)
-            wait(Reactive.runner_task)
+            wait(Reactive.runner_task[])
             @fact queue_size() --> 0
-            @fact orig_runner --> not(Reactive.runner_task) # we should have a new queue runner
+            @fact orig_runner --> not(Reactive.runner_task[]) # we should have a new queue runner
             @fact bcount --> expected_bcount
         end
         @fact bcount --> 0
-        test_queue(1, Reactive.runner_task)
-        test_queue(2, Reactive.runner_task)
+        test_queue(1, Reactive.runner_task[])
+        test_queue(2, Reactive.runner_task[])
     end
 
     context("Queue restarts after more than one push!") do
@@ -68,19 +68,19 @@ facts("Queue runner") do
         function test_queue(expected_bcount, orig_runner)
             push!(a, 3)
             push!(a, 4)
-            wait(Reactive.runner_task)
+            wait(Reactive.runner_task[])
             @fact queue_size() --> 0
-            @fact orig_runner --> not(Reactive.runner_task) # we should have a new queue runner
+            @fact orig_runner --> not(Reactive.runner_task[]) # we should have a new queue runner
             @fact bcount --> expected_bcount*2
         end
         @fact bcount --> 0
-        test_queue(1, Reactive.runner_task)
-        test_queue(2, Reactive.runner_task)
+        test_queue(1, Reactive.runner_task[])
+        test_queue(2, Reactive.runner_task[])
     end
 end
 
 
-if !istaskdone(Reactive.runner_task)
+if !istaskdone(Reactive.runner_task[])
     Reactive.stop()
-    wait(Reactive.runner_task)
+    wait(Reactive.runner_task[])
 end

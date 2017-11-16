@@ -25,22 +25,30 @@ facts("Timing functions") do
     end
 
     context("every") do
-        t = every(0.5)
+        num_steps = 4
+        dt = 0.5
+        # gets pushed the `time()` every `dt` seconds
+        t = every(dt)
+
+        # append the `time()` to the Float64[] array, once every dt secs
         acc = foldp(push!, Float64[], t)
-        Reactive.run(4)
-        end_t = time()
-        log = copy(value(acc))
 
-        @fact log[end-1] --> roughly(end_t, atol=0.01)
-
-        close(acc)
+        # process num_steps pushes (should take num_steps*dt secs)
+        Reactive.run(num_steps)
+        end_t = time() # should be equal to the last time in acc
+        # close(t) to avoid `acc` getting pushed to again
         close(t)
+
+        accval = value(acc)
+        @show end_t end_t .- accval
+        @fact accval[end] --> roughly(end_t, atol=0.01)
+
         Reactive.run_till_now()
 
-        @fact [0.5, 0.5, 0.5] --> roughly(diff(log), atol=0.1)
+        @fact [0.5, 0.5, 0.5] --> roughly(diff(accval), atol=0.1)
 
         sleep(0.75)
-        # make sure close actually also closed the timer
+        # make sure the `close(t)` above actually also closed the timer
         @fact queue_size() --> 0
     end
 
