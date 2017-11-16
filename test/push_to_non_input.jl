@@ -49,10 +49,18 @@ facts("Push to non-input nodes") do
 
     context("push to foldp") do
         gc()
-        f = foldp(+, 0, a)
-        m = map(x->2x, f)
+        x = Signal(number())
+        f = foldp(+, 0, x)
 
         standard_push_test(f)
+
+        # Check for correct continuation
+        pval = value(f)
+        sval = number()
+        push!(x, sval)
+        step()
+
+        @fact value(f) --> pval + sval
     end
 
     context("push to filter") do
