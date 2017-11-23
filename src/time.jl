@@ -117,6 +117,13 @@ function fpswhen(switch, rate; name=auto_name!("$rate fpswhen", switch))
     n
 end
 
+function fpswhen(switch, rate::Signal; name=auto_name!("fpswhen_rate", rate, switch))
+    #Dispatch for the case where the rate is a time-varying signal.
+    n = Signal(Float64, 0.0, (switch,rate ,); name=name)
+    fpswhen_connect(rate, switch, n, name)
+    n
+end
+
 function setup_next_tick(outputref, switchref, dt, wait_dt)
     Timer(t -> begin
         if value(switchref.value)
@@ -127,13 +134,13 @@ end
 
 function fpswhen_connect(rate, switch, output, name)
     prev_time = time()
-    dt = 1.0/rate
     outputref = WeakRef(output)
     switchref = WeakRef(switch)
     timer = Timer(identity, 0) # dummy timer to initialise
     function fpswhen_runner()
         # this function will run if switch gets a new value (i.e. is "active")
         # and if output is pushed to (assumed to be by the timer)
+        dt = 1.0/value(rate)
         if switch.value
             start_time = time()
             timer = setup_next_tick(outputref, switchref, start_time-prev_time, dt)
