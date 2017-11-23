@@ -14,8 +14,7 @@ const runner_task = Ref{Task}()
 
 const run_remove_dead_nodes = Ref(false)
 
-const CHANNEL_SIZE = 1024
-
+const CHANNEL_SIZE = Ref(1024)
 
 #run in asynchronous mode by default
 const async_mode = Ref(true)
@@ -224,7 +223,7 @@ immutable Message
 end
 
 # Global channel for signal updates
-const _messages = Channel{Nullable{Message}}(CHANNEL_SIZE)
+const _messages = Channel{Nullable{Message}}(CHANNEL_SIZE[])
 
 run_async(async::Bool) = (async_mode[] = async)
 
@@ -255,8 +254,9 @@ end
 
 function async_push!(n, x, onerror=print_error)
     taken = Base.n_avail(_messages)
-    if taken >= CHANNEL_SIZE
-        warn("Message queue is full. Ordering may be incorrect.")
+    if taken >= CHANNEL_SIZE[]
+        warn("Message queue is full. Ordering may be incorrect. "*
+        "Channel size can be increased by setting `ENV[\"REACTIVE_CHANNEL_SIZE\"] = ...` before `using Reactive`.")
         @async put!(_messages, Message(n, x, onerror))
     else
         put!(_messages, Message(n, x, onerror))
@@ -414,5 +414,8 @@ function maybe_restart_queue()
 end
 
 function __init__()
+    if haskey(ENV, "REACTIVE_CHANNEL_SIZE")
+        CHANNEL_SIZE[] = parse(Int, ENV["REACTIVE_CHANNEL_SIZE"])
+    end
     runner_task[] = @async run()
 end
