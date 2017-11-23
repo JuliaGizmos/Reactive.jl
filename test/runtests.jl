@@ -5,9 +5,9 @@ using FactCheck
 
 
 facts("Queue runner") do
-    @fact istaskdone(Reactive.runner_task) --> false
+    @fact istaskdone(Reactive.runner_task[]) --> false
     Reactive.stop()
-    @fact istaskdone(Reactive.runner_task) --> true
+    @fact istaskdone(Reactive.runner_task[]) --> true
 end
 
 
