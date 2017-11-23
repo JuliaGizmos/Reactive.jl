@@ -14,7 +14,7 @@ const runner_task = Ref{Task}()
 
 const run_remove_dead_nodes = Ref(false)
 
-const CHANNEL_SIZE = 1024
+const CHANNEL_SIZE = parse(Int, get(ENV, "REACTIVE_CHANNEL_SIZE", "1024"))
 
 
 #run in asynchronous mode by default
@@ -256,7 +256,8 @@ end
 function async_push!(n, x, onerror=print_error)
     taken = Base.n_avail(_messages)
     if taken >= CHANNEL_SIZE
-        warn("Message queue is full. Ordering may be incorrect.")
+        warn("Message queue is full. Ordering may be incorrect. "*
+        "Channel size can be increased by setting `ENV[\"REACTIVE_CHANNEL_SIZE\"] = ...`")
         @async put!(_messages, Message(n, x, onerror))
     else
         put!(_messages, Message(n, x, onerror))
