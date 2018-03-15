@@ -232,18 +232,18 @@ You can drop repeated updates to a signal with [`droprepeats`](api.html#droprepe
 ```{.julia execute="false"}
 julia> p = Signal(0)
 
-julia> droprepeats(p)
+julia> d = droprepeats(p)
 
-julia> foreach(println, p)
+julia> foreach(println, d)
 
-julia> push!(p, 0)
+julia> push!(d, 0)
 
-julia> push!(p, 1)
+julia> push!(d, 1)
 1
 
-julia> push!(p, 1)
+julia> push!(d, 1)
 ```
-Notice how the  value of p did not get printed when it didn't change from the previous value.
+Notice how the  value of d did not get printed when it didn't change from the previous value.
 
 **Example: A Voting System**
 
