@@ -1,4 +1,4 @@
-facts("multi-path graphs 1") do
+@testset "multi-path graphs 1" begin
     a = Signal(0)
     b = Signal(0)
 
@@ -7,7 +7,7 @@ facts("multi-path graphs 1") do
     e = map(+, a, map(x->2x, a)) # Both depend on a
     f = map(+, a, b, c, e)
 
-    @fact queue_size() --> 0
+    @test (queue_size()) == (0)
 
     for (av,bv) in [(1,2),(1,3),(7,7)]
         @show av bv
@@ -16,10 +16,10 @@ facts("multi-path graphs 1") do
         Reactive.run_till_now()
         push!(b, bv)
         Reactive.run_till_now()
-        @fact value(c) --> av + bv
-        @fact value(e) --> 3av
-        @fact value(d) --> bv
-        @fact value(f) --> 5av + 2bv
+        @test (value(c)) == (av + bv)
+        @test (value(e)) == (3av)
+        @test (value(d)) == (bv)
+        @test (value(f)) == (5av + 2bv)
     end
 
     xv = 2
@@ -28,17 +28,17 @@ facts("multi-path graphs 1") do
     x2 = map(x->2x, x)
     z = map(+, y, x2)
     Reactive.run_till_now()
-    @fact value(y) --> xv
-    @fact value(x2) --> 2xv
-    @fact value(z) --> 3xv
+    @test (value(y)) == (xv)
+    @test (value(x2)) == (2xv)
+    @test (value(z)) == (3xv)
 
     xv2 = xv + 1
     push!(x, xv2)
     Reactive.run_till_now()
-    @fact value(z) --> 3xv2
+    @test (value(z)) == (3xv2)
 end
 
-facts("multi-path graphs 2") do
+@testset "multi-path graphs 2" begin
     a = Signal(0)
     b = Signal(0)
 
@@ -53,10 +53,10 @@ facts("multi-path graphs 2") do
         Reactive.run_till_now()
         push!(b, bv)
         Reactive.run_till_now()
-        @fact value(c) --> av + bv
-        @fact value(e) --> 3av
-        @fact value(d) --> bv
-        @fact value(f) --> 5av + 2bv
+        @test (value(c)) == (av + bv)
+        @test (value(e)) == (3av)
+        @test (value(d)) == (bv)
+        @test (value(f)) == (5av + 2bv)
     end
 
     xv = 2
@@ -65,17 +65,17 @@ facts("multi-path graphs 2") do
     x2 = map(x->2x, x)
     z = map(+, y, x2)
     Reactive.run_till_now()
-    @fact value(y) --> xv
-    @fact value(x2) --> 2xv
-    @fact value(z) --> 3xv
+    @test (value(y)) == (xv)
+    @test (value(x2)) == (2xv)
+    @test (value(z)) == (3xv)
 
     xv2 = xv + 1
     push!(x, xv2)
     Reactive.run_till_now()
-    @fact value(z) --> 3xv2
+    @test (value(z)) == (3xv2)
 end
 
-facts("multi-path graphs: dfs good, bfs bad") do
+@testset "multi-path graphs: dfs good, bfs bad" begin
     # DFS good, BFS bad
     # s4x is initially 8 (4*2), after push!(sx,3), s4x should be 12 (4*3), but is instead 9.
     # initially: sx is 2, s2x is 4, s3x is 6, s4x is 8
@@ -92,13 +92,13 @@ facts("multi-path graphs: dfs good, bfs bad") do
     s2x = map(x->2x, sx; name="s2x")
     s3x = map(x->x + x÷2, s2x; name="s3x")
     s4x = map(+, sx, s3x; name="s4x")
-    @fact value.([sx, s2x, s3x, s4x]) --> [2, 4, 6, 8]
+    @test (value.([sx, s2x, s3x, s4x])) == ([2, 4, 6, 8])
     push!(sx, 3)
     Reactive.run_till_now()
-    @fact value.([sx, s2x, s3x, s4x]) --> [3, 6, 9, 12]
+    @test (value.([sx, s2x, s3x, s4x])) == ([3, 6, 9, 12])
 end
 
-facts("multi-path graphs: bfs good, dfs bad") do
+@testset "multi-path graphs: bfs good, dfs bad" begin
     #BFS good, DFS bad
     # s3x is initially 6 (3*2), after push!(sx, 3), s3x should be 9 (3*3), but is instead 7.
     # initially: sx and s1x1, s1x2 are 2, s2x is 4, s3x is 6
@@ -115,13 +115,13 @@ facts("multi-path graphs: bfs good, dfs bad") do
     s1x1 = map(identity, sx)
     s1x2 = map(identity, sx)
     s3x = map(+, s1x1, s1x2, sx)
-    @fact value.([sx, s1x1, s1x2, s3x]) --> [2, 2, 2, 6]
+    @test (value.([sx, s1x1, s1x2, s3x])) == ([2, 2, 2, 6])
     push!(sx, 3)
     Reactive.run_till_now()
-    @fact value.([sx, s1x1, s1x2, s3x]) --> [3, 3, 3, 9]
+    @test (value.([sx, s1x1, s1x2, s3x])) == ([3, 3, 3, 9])
 end
 
-facts("multi-path graphs: dfs bad, bfs bad") do
+@testset "multi-path graphs: dfs bad, bfs bad" begin
     #BFS bad, dfs bad
     # s3x is initially 6 (3*2), after push!(sx, 3), s3x should be 9 (3*3), but is instead 7.
     # what happens in BFS is:
@@ -147,8 +147,8 @@ facts("multi-path graphs: dfs bad, bfs bad") do
     s1x2 = map(identity, sx)
     s2x = map(+, s1x1, s1x2)
     s3x = map(+, sx, s2x)
-    @fact value.([sx, s1x1, s1x2, s2x, s3x]) --> [2, 2, 2, 4, 6]
+    @test (value.([sx, s1x1, s1x2, s2x, s3x])) == ([2, 2, 2, 4, 6])
     push!(sx, 3)
     Reactive.run_till_now()
-    @fact value.([sx, s1x1, s1x2, s2x, s3x]) --> [3, 3, 3, 6, 9]
+    @test (value.([sx, s1x1, s1x2, s2x, s3x])) == ([3, 3, 3, 6, 9])
 end

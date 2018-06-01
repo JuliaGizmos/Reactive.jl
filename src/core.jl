@@ -27,9 +27,14 @@ const edges = Vector{Int}[] #parents to children, useful for plotting graphs
 
 const node_count = Dict{String, Int}() #counts of different signals for naming
 
+if VERSION < v"0.7.0-alpha.2"
+    const wait07 = wait
+else
+    const wait07 = fetch
+end
 
 if !debug_memory
-    type Signal{T}
+    mutable struct Signal{T}
         id::Int # also its index into `nodes`, and `edges`
         value::T
         parents::Tuple
@@ -48,7 +53,7 @@ if !debug_memory
         end
     end
 else
-    type Signal{T}
+    mutable struct  Signal{T}
         id::Int
         value::T
         parents::Tuple
@@ -215,15 +220,29 @@ end
 set_value!(node::Signal, x) = (node.value = x)
 
 ##### Messaging #####
-
-immutable Message
+struct Message
     node
     value
     onerror::Function
 end
-
+struct NullException <: Exception
+end
 # Global channel for signal updates
-const _messages = Channel{Nullable{Message}}(CHANNEL_SIZE[])
+struct MaybeMessage
+    isnull::Bool
+    data::Message
+    MaybeMessage() = new(true)
+    MaybeMessage(m::Message) = new(false, m)
+end
+
+Base.get(x::MaybeMessage) = isnull(x) ? throw(NullException()) : x.data
+if VERSION < v"0.7.0-alpha.2"
+    import Base: isnull
+end
+isnull(x::MaybeMessage) = x.isnull
+Base.convert(::Type{MaybeMessage}, x::Message) = MaybeMessage(x)
+
+const _messages = Channel{MaybeMessage}(CHANNEL_SIZE[])
 
 run_async(async::Bool) = (async_mode[] = async)
 
@@ -265,7 +284,7 @@ function async_push!(n, x, onerror=print_error)
 end
 
 function break_loop()
-    put!(_messages, Nullable{Message}())
+    put!(_messages, MaybeMessage())
 end
 
 function stop()
@@ -274,7 +293,7 @@ function stop()
     # it seems to take a long time until the runner_task is actually finished
     # which can be enough to run into maybe_restart_queue with !isdone(runner_task)
     # see #144
-    wait(runner_task[])
+    wait07(runner_task[])
 end
 
 """
@@ -399,14 +418,14 @@ function maybe_restart_queue()
             # will happen if `add_action!` is called while processing a push!
             prev_runner = current_task()
             @async begin
-                # new runner should wait for current runner to process the
+                # new runner should wait07 for current runner to process the
                 # break_loop (null) message
-                wait(prev_runner)
+                wait07(prev_runner)
                 runner_task[] = current_task()
                 run()
             end
         else
-            wait(runner_task[])
+            wait07(runner_task[])
             runner_task[] = @async run()
         end
     end
