@@ -3,7 +3,7 @@ if !isdefined(:number)
     number() = rand(0:100)
 end
 
-facts("Call counting") do
+@testset "Call counting" begin
     a = Signal(0)
     b = Signal(0)
 
@@ -27,12 +27,12 @@ facts("Call counting") do
         push!(b, number())
         step()
 
-        @fact ca.value --> i
-        @fact cb.value --> i
-        @fact cc.value --> 2i
-        @fact cd.value --> 2i
-        @fact ce.value --> i
-        @fact cf.value --> 2i
+        @test (ca.value) == (i)
+        @test (cb.value) == (i)
+        @test (cc.value) == (2i)
+        @test (cd.value) == (2i)
+        @test (ce.value) == (i)
+        @test (cf.value) == (2i)
     end
 
 end

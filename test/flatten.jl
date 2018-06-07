@@ -1,4 +1,4 @@
-facts("Flatten") do
+@testset "Flatten" begin
 
     a = Signal(0)
     b = Signal(1)
@@ -8,43 +8,43 @@ facts("Flatten") do
     d = flatten(c)
     cnt = foldp((x, y) -> x+1, 0, d)
 
-    context("Signal{Signal} -> flat Signal") do
+    @testset "Signal{Signal} -> flat Signal" begin
         # Flatten implies:
-        @fact value(c) --> a
-        @fact value(d) --> value(a)
+        @test (value(c)) == (a)
+        @test (value(d)) == (value(a))
     end
 
-    context("Initial update count") do
-        @fact value(cnt) --> 0
+    @testset "Initial update count" begin
+        @test (value(cnt)) == (0)
     end
 
-    context("Current signal updates") do
+    @testset "Current signal updates" begin
         push!(a, 2)
         step()
 
-        @fact value(cnt) --> 1
-        @fact value(d) --> value(a)
+        @test (value(cnt)) == (1)
+        @test (value(d)) == (value(a))
     end
 
-    context("Signal swap") do
+    @testset "Signal swap" begin
         push!(c, b)
         step()
-        @fact value(cnt) --> 2
-        @fact value(d) --> value(b)
+        @test (value(cnt)) == (2)
+        @test (value(d)) == (value(b))
 
         push!(a, 3)
         step()
-        @fact value(cnt) --> 2
-        @fact value(d) --> value(b)
+        @test (value(cnt)) == (2)
+        @test (value(d)) == (value(b))
 
         push!(b, 3)
         step()
 
-        @fact value(cnt) --> 3
-        @fact value(d) --> value(b)
+        @test (value(cnt)) == (3)
+        @test (value(d)) == (value(b))
     end
 
-    context("Subtle sig swap issue") do
+    @testset "Subtle sig swap issue" begin
         # When a node, a map (e) in this case, has a flatten as a parent, but also
         # a signal that is the flatten parent sigsig's (c's) current value ("a" here)
         # then when the sigsig gets pushed another value, you want the map to
@@ -57,38 +57,38 @@ facts("Flatten") do
         d = flatten(c)
         e = map(*, a, d) #e is dependent on "a" directly and through d
 
-        @fact value(e) --> 1
+        @test (value(e)) == (1)
         push!(a, 3)
         step()
-        @fact value(a) --> 3
-        @fact value(d) --> 3
-        @fact value(e) --> 9
+        @test (value(a)) == (3)
+        @test (value(d)) == (3)
+        @test (value(e)) == (9)
 
         push!(c, b)
-        @fact value(e) --> 9 # no change until step
+        @test (value(e)) == (9) # no change until step)
         step()
-        @fact value(d) --> 2 # d now takes b's value
-        @fact value(e) --> 6 # e == d * a == 2 * 3 == 6
+        @test (value(d)) == (2) # d now takes b's value)
+        @test (value(e)) == (6) # e == d * a == 2 * 3 == 6)
 
         # the push!(c, b) should have triggered a "rewiring" of the graph
         # so that updates to b affect d and e
         push!(b, 9)
         step()
-        @fact value(d) --> 9  # d now takes b's value
-        @fact value(e) --> 27 # e == d * a == 9 * 3 == 27
+        @test (value(d)) == (9)  # d now takes b's value)
+        @test (value(e)) == (27) # e == d * a == 9 * 3 == 27)
 
         # changes to a should still affect e (but not d)
         push!(a, 4)
-        @fact value(e) --> 27 # no change until step
+        @test (value(e)) == (27) # no change until step)
         step()
-        @fact value(a) --> 4
-        @fact value(d) --> 9 # no change to d
-        @fact value(e) --> 36 # a*d == 4 * 9
+        @test (value(a)) == (4)
+        @test (value(d)) == (9) # no change to d)
+        @test (value(e)) == (36) # a*d == 4 * 9)
 
-        @fact queue_size() --> 0
+        @test (queue_size()) == (0)
     end
 
-    context("Sigsig's value created after SigSig") do
+    @testset "Sigsig's value created after SigSig" begin
         # This is why we need bind! in flatten implementation rather than just
         # setting the flatten's parents to (input, current_node) every time
         # input updates. That won't work if the current_node was created after
@@ -104,19 +104,19 @@ facts("Flatten") do
         d = flatten(c)
         b_orig = b
 
-        @fact d.value --> a.value
+        @test (d.value) == (a.value)
 
         push!(b, number())
         step()
-        @fact d.value --> b.value
+        @test (d.value) == (b.value)
 
         push!(a, number())
         step()
-        @fact d.value --> a.value
-        @fact b_orig --> not(b)
+        @test (d.value) == (a.value)
+        @test (b_orig) != b
 
         push!(b, number())
         step()
-        @fact d.value + 1 --> b.value + 1
+        @test (d.value + 1) == (b.value + 1)
     end
 end

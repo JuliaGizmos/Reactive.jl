@@ -1,13 +1,18 @@
 using Reactive
-using FactCheck
-
+if VERSION < v"0.7.0-DEV.2005"
+    using Base.Test
+else
+    using Test
+end
 # Stop the runner task
 
+using Reactive: wait07
 
-facts("Queue runner") do
-    @fact istaskdone(Reactive.runner_task[]) --> false
+
+@testset "Queue runner" begin
+    @test (istaskdone(Reactive.runner_task[])) == (false)
     Reactive.stop()
-    @fact istaskdone(Reactive.runner_task[]) --> true
+    @test (istaskdone(Reactive.runner_task[])) == (true)
 end
 
 
@@ -24,4 +29,3 @@ include("flatten.jl")
 include("time.jl")
 include("async.jl")
 include("queue_runner.jl")
-FactCheck.exitstatus()

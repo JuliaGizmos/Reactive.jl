@@ -6,48 +6,48 @@ function standard_push_test(non_input::Signal)
     push!(non_input, pval)
     step()
 
-    @fact value(non_input) --> pval
-    @fact value(m) --> 2pval
+    @test (value(non_input)) == (pval)
+    @test (value(m)) == (2pval)
 end
 
-facts("Push to non-input nodes") do
+@testset "Push to non-input nodes" begin
 
     a = Signal(number(); name="a")
     b = map(x -> x*x, a; name="b")
 
-    context("push to map") do
+    @testset "push to map" begin
         m = map(x->2x, b)
 
         push!(b, 10.0)
         step()
-        @fact value(b) --> 10.0
-        @fact value(m) --> 2value(b)
+        @test (value(b)) == (10.0)
+        @test (value(m)) == (2value(b))
 
         push!(a, 2.0)
         step()
-        @fact value(b) --> 4.0
-        @fact value(m) --> 2value(b)
+        @test (value(b)) == (4.0)
+        @test (value(m)) == (2value(b))
 
         push!(b, 3.0)
         step()
-        @fact value(b) --> 3.0
-        @fact value(m) --> 2value(b)
+        @test (value(b)) == (3.0)
+        @test (value(m)) == (2value(b))
     end
 
 
-    context("push to merge") do
+    @testset "push to merge" begin
         ## Merge
         d = Signal(number(); name="d")
         e = merge(b, d, a; name="e")
         m = map(x->2x, e)
         # precedence to d
-        @fact value(e) --> value(d)
-        @fact value(m) --> 2value(e)
+        @test (value(e)) == (value(d))
+        @test (value(m)) == (2value(e))
 
         standard_push_test(e)
     end
 
-    context("push to foldp") do
+    @testset "push to foldp" begin
         gc()
         x = Signal(number())
         f = foldp(+, 0, x)
@@ -60,17 +60,17 @@ facts("Push to non-input nodes") do
         push!(x, sval)
         step()
 
-        @fact value(f) --> pval + sval
+        @test (value(f)) == (pval + sval)
     end
 
-    context("push to filter") do
+    @testset "push to filter" begin
         g = Signal(0)
         pred = x -> x % 2 != 0
         h = filter(pred, 1, g)
         standard_push_test(h)
     end
 
-    context("push to sampleon") do
+    @testset "push to sampleon" begin
         # sampleon
         g = Signal(0)
         nv = number()
@@ -81,7 +81,7 @@ facts("Push to non-input nodes") do
         standard_push_test(j)
     end
 
-    context("push to droprepeats") do
+    @testset "push to droprepeats" begin
         # droprepeats
         k = Signal(1)
         l = droprepeats(k)
@@ -89,7 +89,7 @@ facts("Push to non-input nodes") do
         standard_push_test(l)
     end
 
-    context("push to filterwhen") do
+    @testset "push to filterwhen" begin
         # filterwhen
         b = Signal(false)
         n = Signal(1)
@@ -97,39 +97,39 @@ facts("Push to non-input nodes") do
         standard_push_test(dw)
     end
 
-    context("push to previous") do
+    @testset "push to previous" begin
         x = Signal(0)
         y = previous(x)
         standard_push_test(y)
     end
 
-    context("push to delay") do
+    @testset "push to delay" begin
         x = Signal(0)
         y = delay(x)
         standard_push_test(y)
     end
 
-    context("bind non-input") do
+    @testset "bind non-input" begin
         s = Signal(1; name="sig 1")
         m = map(x->2x, s; name="m")
         s2 = Signal(3; name="sig 2")
         push!(m, 10)
         step()
-        @fact value(m) --> 10
+        @test (value(m)) == (10)
 
         bind!(m, s2) #two-way bind
-        @fact value(m) --> 3
-        @fact value(s2) --> 3
+        @test (value(m)) == (3)
+        @test (value(s2)) == (3)
 
         push!(m, 6)
         step()
-        @fact value(m) --> 6
-        @fact value(s2) --> 6
+        @test (value(m)) == (6)
+        @test (value(s2)) == (6)
 
         push!(s2, 10)
         step()
-        @fact value(m) --> 10
-        @fact value(s2) --> 10
+        @test (value(m)) == (10)
+        @test (value(s2)) == (10)
     end
 
 end
