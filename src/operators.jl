@@ -59,7 +59,7 @@ remove updates from the `signal` where `f` returns `false`. The filter will hold
 the value default until f(value(signal)) returns true, when it will be updated
 to value(signal).
 """
-function filter{T}(f::Function, default, input::Signal{T}; name=auto_name!("filter", input))
+function filter(f::Function, default, input::Signal{T}; name=auto_name!("filter", input)) where T
     n = Signal(T, f(value(input)) ? value(input) : default, (input,); name=name)
     connect_filter(f, default, n, input)
     n
@@ -71,7 +71,7 @@ end
 remove updates from the `signal` where `f` returns `false`. The filter will hold
 the current value of the signal until `f(value(signal))` returns true.
 """
-filter{T}(f::Function, input::Signal{T}; kwargs...) = filter(f, value(input), input; kwargs...)
+filter(f::Function, input::Signal{T}; kwargs...) where {T} = filter(f, value(input), input; kwargs...)
 
 function connect_filter(f, default, output, input)
     add_action!(output) do
@@ -91,8 +91,8 @@ Keep updates to `input` only when `switch` is true.
 
 If switch is false initially, the specified default value is used.
 """
-function filterwhen{T}(predicate::Signal{Bool}, default, input::Signal{T};
-                        name=auto_name!("filterwhen", predicate, input))
+function filterwhen(predicate::Signal{Bool}, default, input::Signal{T};
+                     name=auto_name!("filterwhen", predicate, input)) where T
     n = Signal(T, value(predicate) ? value(input) : default, (input,); name=name)
     connect_filterwhen(n, predicate, input)
     n
@@ -135,7 +135,7 @@ end
 
 Sample the value of `b` whenever `a` updates.
 """
-function sampleon{T}(sample_trigger, input::Signal{T}; name=auto_name!("sampleon", input))
+function sampleon(sample_trigger, input::Signal{T}; name=auto_name!("sampleon", input)) where T
     n = Signal(T, value(input), (sample_trigger,); name=name)
     connect_sampleon(n, input)
     n
@@ -204,7 +204,7 @@ end
 Create a signal which holds the previous value of `input`.
 You can optionally specify a different initial value.
 """
-function previous{T}(input::Signal{T}, default=value(input); name=auto_name!("previous", input))
+function previous(input::Signal{T}, default=value(input); name=auto_name!("previous", input)) where T
     n = Signal(T, default, (input,); name=name)
     connect_previous(n, input)
     n
@@ -226,7 +226,7 @@ throughout the signal graph.
 
 Returns the delayed signal.
 """
-function delay{T}(input::Signal{T}, default=value(input); name=auto_name!("delay", input))
+function delay(input::Signal{T}, default=value(input); name=auto_name!("delay", input)) where T
     n = Signal(T, default, (input,); name=name)
     connect_delay(n, input)
     n
@@ -247,7 +247,7 @@ end
 Drop updates to `input` whenever the new value is the same
 as the previous value of the signal.
 """
-function droprepeats{T}(input::Signal{T}; name=auto_name!("droprepeats", input))
+function droprepeats(input::Signal{T}; name=auto_name!("droprepeats", input)) where T
     n = Signal(T, value(input), (input,); name=name)
     connect_droprepeats(n, input)
     n
