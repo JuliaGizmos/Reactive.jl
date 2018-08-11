@@ -53,7 +53,7 @@
     end
 
     @testset "throttle" begin
-        gc()
+        GC.gc()
         x = Signal(0; name="x")
         ydt = 0.5
         y′dt = 1.1

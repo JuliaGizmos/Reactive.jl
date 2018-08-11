@@ -1,5 +1,5 @@
 
-if !isdefined(:number)
+if !isdefined(Reactive, :number)
     number() = rand(0:100)
 end
 

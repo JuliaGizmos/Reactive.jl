@@ -99,8 +99,8 @@ function every_connect(dt, output)
         print_error(pushnode, val, error_node, ex)
         close(timer)
     end
-    timer = Timer(x -> push!(outputref.value, time(), onerror_close_timer), dt, dt)
-    finalizer(output, _->close(timer))
+    timer = Timer(x -> push!(outputref.value, time(), onerror_close_timer), dt; interval=dt)
+    finalizer(_->close(timer), output)
     output
 end
 
@@ -151,7 +151,7 @@ function fpswhen_connect(rate, switch, output, name)
 
     fpswhen_runner() # init
     # ensure timer stops when output node is garbage collected
-    finalizer(output, _->close(timer))
+    finalizer(_->close(timer), output)
 end
 
 """

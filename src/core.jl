@@ -48,7 +48,7 @@ if !debug_memory
             push!(nodes, WeakRef(n))
             push!(edges, Int[])
             foreach(p->push!(edges[p.id], id), parents)
-            finalizer(n, schedule_node_cleanup)
+            finalizer(schedule_node_cleanup, n)
             n
         end
     end
@@ -69,7 +69,7 @@ else
             push!(edges, Int[])
             foreach(p->push!(edges[p.id], id), parents)
             nodeset[n] = nothing
-            finalizer(n, log_gc)
+            finalizer(log_gc, n)
             n
         end
     end
@@ -152,7 +152,7 @@ end
 
 value(n) = n
 value(n::Signal) = n.value
-value(::Void) = false
+value(::Nothing) = false
 
 eltype(::Signal{T}) where {T} = T
 eltype(::Type{Signal{T}}) where {T} = T
@@ -319,7 +319,7 @@ activate!(node::Signal) = (node.active = true)
 deactivate!(node::Signal) = (node.active = false)
 isactive(node::Signal) = node.active
 
-isactive(deadnode::Void) = false
+isactive(deadnode::Nothing) = false
 
 activate!(noderef::WeakRef) = (noderef.value != nothing &&
                                 (noderef.value.active = true))
