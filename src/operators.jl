@@ -42,7 +42,7 @@ function connect_map(f, output, inputs...)
     end
 end
 
-probe(node, name, io=STDERR) =
+probe(node, name, io=stderr) =
     map(x -> println(io, name, " >! ", x), node)
 
 """
@@ -383,7 +383,6 @@ function bindmap!(dest::Signal, src2dest::Function, src::Signal, dest2src = noth
         nothing
     end
     finalizer((src)->unbind!(dest, src, twoway), src)
-
     _bindings[src=>dest] = map(bind_updater, src; name="binder: $(src.name)=>$(dest.name)")
     initial && bind_updater(src.value) # init now that _bindings[src=>dest] is set
 

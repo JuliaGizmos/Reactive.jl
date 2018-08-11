@@ -85,8 +85,8 @@ Signal(t::Type{T}; name::String = auto_name!("input")) where {T} = Signal(Type{T
 function log_gc(n)
     @async begin
         lock(io_lock)
-        print(STDERR, "Signal got gc'd. Creation backtrace:")
-        Base.show_backtrace(STDERR, n.bt)
+        print(stderr, "Signal got gc'd. Creation backtrace:")
+        Base.show_backtrace(stderr, n.bt)
         println(STDOUT)
         unlock(io_lock)
     end
@@ -261,7 +261,7 @@ Signal whose action triggered the error, and `capex` is a
 exception object, and `processed_bt` which is the backtrace of the
 exception.
 
-The default error callback will print the error and backtrace to STDERR.
+The default error callback will print the error and backtrace to stderr.
 """
 function Base.push!(n::Signal, x, onerror = print_error)
     if async_mode[]
@@ -376,7 +376,7 @@ function run_push(pushnode::Signal, val, onerror, dont_remove_dead = false)
                 onerror(pushnode, val, node, CapturedException(err, bt))
             catch err_onerror
                 if isa(err_onerror, MethodError)
-                    println(STDERR, "The syntax for `onerror` has changed, see ?push!")
+                    println(stderr, "The syntax for `onerror` has changed, see ?push!")
                 end
                 rethrow()
             end
@@ -387,7 +387,7 @@ end
 # Default error handler function
 function print_error(pushnode, val, error_node, ex)
     lock(io_lock)
-    io = STDERR
+    io = stderr
     println(io, "Failed to push!")
     print(io, "    ")
     show(io, val)
