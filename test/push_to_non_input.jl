@@ -48,7 +48,7 @@ end
     end
 
     @testset "push to foldp" begin
-        gc()
+        GC.gc()
         x = Signal(number())
         f = foldp(+, 0, x)
 

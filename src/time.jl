@@ -15,8 +15,8 @@ For example
 will accumulate a vector of updates to the integer signal `x` and push it after `x` is inactive (doesn't update) for 0.2 seconds.
 
 """
-function debounce{T}(dt, node::Signal{T}, f=(acc,x)->x, init=value(node),
-        reinit=x->x; typ=typeof(init), name=auto_name!("debounce $(dt)s", node))
+function debounce(dt, node::Signal{T}, f=(acc,x)->x, init=value(node),
+        reinit=x->x; typ=typeof(init), name=auto_name!("debounce $(dt)s", node)) where T
     # we don't add `node` as a parent of throttle, as the action is added to the
     # `node` itself, which pushes to the output node at the appropriate time.
     output = Signal(typ, init, (); name=name)
@@ -43,9 +43,9 @@ If `leading` is `true`, the first update from `input` will be sent immediately b
 New in v0.4.1: `throttle`'s behaviour from previous versions is now available with the `debounce` signal type.
 
 """
-function throttle{T}(dt, node::Signal{T}, f=(acc,x)->x, init=value(node),
+function throttle(dt, node::Signal{T}, f=(acc,x)->x, init=value(node),
         reinit=x->x; typ=typeof(init), name=auto_name!("throttle $(dt)s", node),
-        leading=false)
+        leading=false) where T
     output = Signal(typ, init, (node,); name=name)
     throttle_connect(dt, output, node, f, init, reinit, leading, false)
     output
@@ -99,7 +99,7 @@ function every_connect(dt, output)
         print_error(pushnode, val, error_node, ex)
         close(timer)
     end
-    timer = Timer(x -> push!(outputref.value, time(), onerror_close_timer), dt, dt)
+    timer = Timer(x -> push!(outputref.value, time(), onerror_close_timer), dt; interval=dt)
     finalizer(_->close(timer), output)
     output
 end

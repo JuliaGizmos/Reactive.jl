@@ -42,7 +42,7 @@ if !debug_memory
         actions::Vector{Function}
         preservers::Dict
         name::String
-        function (::Type{Signal{T}}){T}(v, parents, pres, name)
+        function Signal{T}(v, parents, pres, name) where T
             id = length(nodes) + 1
             n=new{T}(id, v, parents, false, Function[], pres, name)
             push!(nodes, WeakRef(n))
@@ -62,7 +62,7 @@ else
         preservers::Dict
         name::String
         bt
-        function (::Type{Signal{T}}){T}(v, parents, actions, pres, name)
+        function Signal{T}(v, parents, actions, pres, name) where T
             id = length(nodes) + 1
             n=new{T}(id, v, parents, false, Function[], pres, name, backtrace())
             push!(nodes, WeakRef(n))
@@ -75,12 +75,12 @@ else
     end
 end
 
-Signal{T}(x::T, parents=(); name::String = auto_name!("input")) =
+Signal(x::T, parents=(); name::String = auto_name!("input")) where {T} =
     Signal{T}(x, parents, Dict{Signal, Int}(), name)
-Signal{T}(::Type{T}, x, parents=(); name::String = auto_name!("input")) =
+Signal(::Type{T}, x, parents=(); name::String = auto_name!("input")) where {T} =
     Signal{T}(x, parents, Dict{Signal, Int}(), name)
 # A signal of types
-Signal{T}(t::Type{T}; name::String = auto_name!("input")) = Signal(Type{T}, t, name=name)
+Signal(t::Type{T}; name::String = auto_name!("input")) where {T} = Signal(Type{T}, t, name=name)
 
 function log_gc(n)
     @async begin
@@ -152,10 +152,10 @@ end
 
 value(n) = n
 value(n::Signal) = n.value
-value(::Void) = false
+value(::Nothing) = false
 
-eltype{T}(::Signal{T}) = T
-eltype{T}(::Type{Signal{T}}) = T
+eltype(::Signal{T}) where {T} = T
+eltype(::Type{Signal{T}}) where {T} = T
 
 ##### Connections #####
 const restart_queue = Ref(false)
@@ -319,7 +319,7 @@ activate!(node::Signal) = (node.active = true)
 deactivate!(node::Signal) = (node.active = false)
 isactive(node::Signal) = node.active
 
-isactive(deadnode::Void) = false
+isactive(deadnode::Nothing) = false
 
 activate!(noderef::WeakRef) = (noderef.value != nothing &&
                                 (noderef.value.active = true))
