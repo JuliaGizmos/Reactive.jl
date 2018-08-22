@@ -16,7 +16,7 @@ import Reactive: runner_task
         end
         function test_queue(expected_bcount, orig_runner)
             push!(a, 3)
-            wait07(Reactive.runner_task[])
+            fetch(Reactive.runner_task[])
             @test (queue_size()) == (0)
             @test (orig_runner) != (Reactive.runner_task[]) # we should have a new queue runner)
             @test (bcount) == (expected_bcount)
@@ -43,7 +43,7 @@ import Reactive: runner_task
         end
         function test_queue(expected_bcount, orig_runner)
             push!(a, 3)
-            wait07(Reactive.runner_task[])
+            fetch(Reactive.runner_task[])
             @test (queue_size()) == (0)
             @test (orig_runner) != Reactive.runner_task[] # we should have a new queue runner)
             @test (bcount) == (expected_bcount)
@@ -68,7 +68,7 @@ import Reactive: runner_task
         function test_queue(expected_bcount, orig_runner)
             push!(a, 3)
             push!(a, 4)
-            wait07(Reactive.runner_task[])
+            fetch(Reactive.runner_task[])
             @test (queue_size()) == (0)
             @test (orig_runner) != (Reactive.runner_task[]) # we should have a new queue runner)
             @test (bcount) == (expected_bcount*2)
@@ -82,5 +82,5 @@ end
 
 if !istaskdone(Reactive.runner_task[])
     Reactive.stop()
-    wait07(Reactive.runner_task[])
+    fetch(Reactive.runner_task[])
 end

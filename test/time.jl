@@ -10,7 +10,7 @@
         push!(b, true)
 
         step() # processing the push to b will start the fpswhen's timer
-        # then we wait07 for two pushes from the timer, which should take ~ 1sec
+        # then we fetch for two pushes from the timer, which should take ~ 1sec
         dt = @elapsed Reactive.run(2)
         push!(b, false)
         Reactive.run(1) # setting b to false should stop the timer
