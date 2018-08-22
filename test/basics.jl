@@ -73,7 +73,7 @@ using Reactive
 
         ## foldl over time
 
-        gc()
+        GC.gc()
         push!(a, 0)
         step()
         f = foldp(+, 0, a)

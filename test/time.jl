@@ -19,7 +19,7 @@
         @test (queue_size()) == (0)
 
         @show dt
-        @test isapprox(dt, 1, atol = 0.25) # mac OSX needs a lot of tolerence here)
+        @test isapprox(dt, 1, atol = 0.3) # mac OSX needs a lot of tolerence here)
         @test (value(acc)) == (2)
 
     end
@@ -53,7 +53,7 @@
     end
 
     @testset "throttle" begin
-        gc()
+        GC.gc()
         x = Signal(0; name="x")
         ydt = 0.5
         y′dt = 1.1
