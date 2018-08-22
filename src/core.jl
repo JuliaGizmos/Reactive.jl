@@ -27,11 +27,6 @@ const edges = Vector{Int}[] #parents to children, useful for plotting graphs
 
 const node_count = Dict{String, Int}() #counts of different signals for naming
 
-if VERSION < v"0.7.0-alpha.2"
-    const wait07 = wait
-else
-    const wait07 = fetch
-end
 
 if !debug_memory
     mutable struct Signal{T}
@@ -293,7 +288,7 @@ function stop()
     # it seems to take a long time until the runner_task is actually finished
     # which can be enough to run into maybe_restart_queue with !isdone(runner_task)
     # see #144
-    wait07(runner_task[])
+    fetch(runner_task[])
 end
 
 """
@@ -368,7 +363,7 @@ function run_push(pushnode::Signal, val, onerror, dont_remove_dead = false)
         end
     catch err
         if isa(err, InterruptException)
-            info("Reactive event loop was inturrupted.")
+            @info("Reactive event loop was inturrupted.")
             rethrow()
         else
             bt = catch_backtrace()
@@ -418,14 +413,14 @@ function maybe_restart_queue()
             # will happen if `add_action!` is called while processing a push!
             prev_runner = current_task()
             @async begin
-                # new runner should wait07 for current runner to process the
+                # new runner should fetch for current runner to process the
                 # break_loop (null) message
-                wait07(prev_runner)
+                fetch(prev_runner)
                 runner_task[] = current_task()
                 run()
             end
         else
-            wait07(runner_task[])
+            fetch(runner_task[])
             runner_task[] = @async run()
         end
     end
