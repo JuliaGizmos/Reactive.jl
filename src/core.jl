@@ -27,11 +27,7 @@ const edges = Vector{Int}[] #parents to children, useful for plotting graphs
 
 const node_count = Dict{String, Int}() #counts of different signals for naming
 
-if VERSION < v"0.7.0-alpha.2"
-    const wait07 = wait
-else
-    const wait07 = fetch
-end
+const wait07 = fetch
 
 if !debug_memory
     mutable struct Signal{T}
@@ -236,9 +232,6 @@ struct MaybeMessage
 end
 
 Base.get(x::MaybeMessage) = isnull(x) ? throw(NullException()) : x.data
-if VERSION < v"0.7.0-alpha.2"
-    import Base: isnull
-end
 isnull(x::MaybeMessage) = x.isnull
 Base.convert(::Type{MaybeMessage}, x::Message) = MaybeMessage(x)
 
@@ -368,7 +361,7 @@ function run_push(pushnode::Signal, val, onerror, dont_remove_dead = false)
         end
     catch err
         if isa(err, InterruptException)
-            info("Reactive event loop was inturrupted.")
+            @info("Reactive event loop was inturrupted.")
             rethrow()
         else
             bt = catch_backtrace()
