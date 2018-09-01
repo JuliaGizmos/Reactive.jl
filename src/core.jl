@@ -363,7 +363,7 @@ function run_push(pushnode::Signal, val, onerror, dont_remove_dead = false)
         end
     catch err
         if isa(err, InterruptException)
-            @info("Reactive event loop was inturrupted.")
+            @info("Reactive event loop was interrupted.")
             rethrow()
         else
             bt = catch_backtrace()
