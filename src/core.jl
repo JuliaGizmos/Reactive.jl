@@ -269,8 +269,8 @@ end
 function async_push!(n, x, onerror=print_error)
     taken = Base.n_avail(_messages)
     if taken >= CHANNEL_SIZE[]
-        warn("Message queue is full. Ordering may be incorrect. "*
-        "Channel size can be increased by setting `ENV[\"REACTIVE_CHANNEL_SIZE\"] = ...` before `using Reactive`.")
+        @warn "Message queue is full. Ordering may be incorrect. "*
+        "Channel size can be increased by setting `ENV[\"REACTIVE_CHANNEL_SIZE\"] = ...` before `using Reactive`."
         @async put!(_messages, Message(n, x, onerror))
     else
         put!(_messages, Message(n, x, onerror))
