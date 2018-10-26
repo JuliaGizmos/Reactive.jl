@@ -43,7 +43,7 @@ function connect_map(f, output, inputs...)
 end
 
 probe(node, name, io=stderr) =
-    map(x -> println(io, name, " >! ", x), node)
+    preserve(map(x -> (println(io, name, " >! ", x); x), node))
 
 """
     foreach(f, inputs...)
