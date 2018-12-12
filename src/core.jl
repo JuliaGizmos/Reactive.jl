@@ -142,7 +142,9 @@ end
 
 function Base.show(io::IO, n::Signal)
     active_str = isactive(n) ? "(active)" : ""
-    write(io, "$(n.id): \"$(n.name)\" = $(something(n.value, "nothing")) $(eltype(n)) $active_str")
+    print(io, n.id, ": \"", n.name, "\" = ")
+    print(io, something(n.value, "nothing"))
+    print(io, ' ', eltype(n), ' ', active_str)
 end
 
 value(n) = n
