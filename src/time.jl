@@ -54,7 +54,7 @@ end
 # Aggregate a signal producing an update at most once in dt seconds
 function throttle_connect(dt, output, input, f, init, reinit, leading, debounce)
     collected = init
-    timer = Timer(identity, 0) #dummy timer to initialise
+    timer = Timer(identity, interval=0) #dummy timer to initialise
     dopush(_) = begin
         push!(output, collected)
         collected = reinit(collected)
@@ -75,7 +75,7 @@ function throttle_connect(dt, output, input, f, init, reinit, leading, debounce)
             # prevpush is reset in dopush, so that calls via the Timer also reset it
             dopush(elapsed)
         else
-            timer = Timer(dopush, dt-elapsed)
+            timer = Timer(dopush, interval=dt-elapsed)
         end
         nothing
     end
@@ -122,7 +122,7 @@ function setup_next_tick(outputref, switchref, dt, wait_dt)
         if value(switchref.value)
             push!(outputref.value, dt)
         end
-    end, wait_dt)
+    end, interval=wait_dt)
 end
 
 function fpswhen_connect(rate, switch, output, name)
@@ -130,7 +130,7 @@ function fpswhen_connect(rate, switch, output, name)
     dt = 1.0/rate
     outputref = WeakRef(output)
     switchref = WeakRef(switch)
-    timer = Timer(identity, 0) # dummy timer to initialise
+    timer = Timer(identity, interval=0) # dummy timer to initialise
     function fpswhen_runner()
         # this function will run if switch gets a new value (i.e. is "active")
         # and if output is pushed to (assumed to be by the timer)

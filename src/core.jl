@@ -233,9 +233,6 @@ struct MaybeMessage
 end
 
 Base.get(x::MaybeMessage) = isnull(x) ? throw(NullException()) : x.data
-if VERSION < v"0.7.0-alpha.2"
-    import Base: isnull
-end
 isnull(x::MaybeMessage) = x.isnull
 Base.convert(::Type{MaybeMessage}, x::Message) = MaybeMessage(x)
 
